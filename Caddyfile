@@ -1,0 +1,26 @@
+localhost:8080 {
+    reverse_proxy /api/ws backend:8000
+    reverse_proxy /api/* backend:8000
+    reverse_proxy /* frontend:3000
+
+    handle_path /static/avatars/* {
+        root * /go/uploads/avatars/
+        file_server
+    }
+    handle_path /static/posts/* {
+        root * /go/uploads/posts/
+        file_server
+    }
+    handle_path /static/comments/* {
+        root * /go/uploads/comments/
+        file_server
+    }
+    handle_path /static/groups/* {
+        root * /go/uploads/groups/
+        file_server
+    }
+    handle_path /static/group_posts/* {
+        root * /go/uploads/group_posts/
+        file_server
+    }
+}

@@ -1,0 +1,79 @@
+package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+
+	"socialbackend/pkg/db"
+	"socialbackend/pkg/middleware"
+)
+
+func Me(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
+	var raw struct {
+		ID        string         `json:"id"`
+		Email     string         `json:"email"`
+		FirstName string         `json:"first_name"`
+		LastName  string         `json:"last_name"`
+		Avatar    sql.NullString `json:"-"`
+		Nickname  sql.NullString `json:"-"`
+		About     sql.NullString `json:"-"`
+		IsPrivate bool           `json:"is_private"`
+		Dob       sql.NullTime   `json:"-"`
+	}
+
+	err := db.DB.QueryRow(`
+		SELECT id, email, first_name, last_name, avatar, nickname, about, is_private, dob
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(
+		&raw.ID, &raw.Email, &raw.FirstName, &raw.LastName,
+		&raw.Avatar, &raw.Nickname, &raw.About, &raw.IsPrivate, &raw.Dob,
+	)
+
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Build response
+	response := struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Avatar    string `json:"avatar"`
+		Nickname  string `json:"nickname"`
+		About     string `json:"about"`
+		IsPrivate bool   `json:"is_private"`
+		Dob       string `json:"dob"`
+	}{
+		ID:        raw.ID,
+		Email:     raw.Email,
+		FirstName: raw.FirstName,
+		LastName:  raw.LastName,
+		Avatar:    "/static/avatars/default.png", // fallback
+		Nickname:  "",
+		About:     "",
+		IsPrivate: raw.IsPrivate,
+		Dob:       "",
+	}
+
+	if raw.Avatar.Valid {
+		response.Avatar = raw.Avatar.String
+	}
+	if raw.Nickname.Valid {
+		response.Nickname = raw.Nickname.String
+	}
+	if raw.About.Valid {
+		response.About = raw.About.String
+	}
+	if raw.Dob.Valid {
+		response.Dob = raw.Dob.Time.Format("2006-01-02")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

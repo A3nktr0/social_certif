@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:latest
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+  
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - uploads:/go/uploads
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - uploads:/go/uploads
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  uploads:
