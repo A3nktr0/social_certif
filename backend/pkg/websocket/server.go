@@ -38,5 +38,5 @@ func ServeWS(w http.ResponseWriter, r *http.Request) {
 	GlobalHub.register <- client
 
 	go client.WritePump()
-	client.ReadPump()
+	go client.ReadPump()
 }

@@ -4,17 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import NotificationItem from "./NotificationItem";
 import { fetchNotifications } from "@/lib/services/notifications";
+import { Notification } from "@/types/notification";
 
-interface Notification {
-  id: string;
-  type: string;
-  fromUserId: string;
-  content: string;
-  isRead: boolean;
-  createdAt: string;
-  nickname: string;
-  data: Record<string, any>;
-}
 
 interface NotificationDropdownProps {
   decrementBadge: () => void;

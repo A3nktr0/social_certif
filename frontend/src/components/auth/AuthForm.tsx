@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState /*, useRef */ } from "react";
+import DOMPurify from "dompurify";
+import { z } from "zod";
+// import ReCAPTCHA from "react-google-recaptcha";
 
 type Field = {
   name: string;
@@ -15,12 +18,20 @@ type Props = {
   onSubmit: (form: Record<string, string>) => Promise<void>;
 };
 
+const formSchema = z.object({
+  email: z.string().email({ message: "Email must be a valid address." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
+  is_private: z.enum(["true", "false"], { message: "Privacy setting is required." }),
+});
+
 export default function AuthForm({ title, fields, onSubmit }: Props) {
   const [form, setForm] = useState<Record<string, string>>({
     is_private: "false",
   });
-
-  const [error, setError] = useState("");
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
+  // const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,17 +39,40 @@ export default function AuthForm({ title, fields, onSubmit }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    try {
-      const cleanForm = Object.fromEntries(
-        Object.entries(form).filter(([key]) =>
-          fields.some((f) => f.name === key)
-        )
-      );
-      await onSubmit(cleanForm);
-    } catch (err) {
-      setError((err as Error).message);
+    setErrorMessages([]);
+
+    const sanitizedForm: Record<string, string> = {};
+    for (const key in form) {
+      sanitizedForm[key] = DOMPurify.sanitize(form[key]);
     }
+
+    const result = formSchema.safeParse(sanitizedForm);
+    if (!result.success) {
+      const messages = result.error.errors.map((err) => {
+        const label = fields.find((f) => f.name === err.path[0])?.label || err.path[0];
+        return `${label}: ${err.message}`;
+      });
+      setErrorMessages(messages);
+      return;
+    }
+
+    // CAPTCHA (optional)
+    /*
+    const captchaToken = recaptchaRef.current?.getValue();
+    if (!captchaToken) {
+      setErrorMessages(["Please complete the CAPTCHA."]);
+      return;
+    }
+    sanitizedForm["captcha"] = captchaToken;
+    */
+
+    try {
+      await onSubmit(sanitizedForm);
+    } catch (err) {
+      // Always show generic login error
+      setErrorMessages(["Invalid email or password."]);
+    }
+    
   };
 
   return (
@@ -81,7 +115,6 @@ export default function AuthForm({ title, fields, onSubmit }: Props) {
               type={f.type}
               name={f.name}
               required={f.required ?? false}
-              // className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={handleChange}
             />
@@ -89,7 +122,19 @@ export default function AuthForm({ title, fields, onSubmit }: Props) {
         </div>
       ))}
 
-      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+      {/* Uncomment when reCAPTCHA is configured */}
+      {/* <ReCAPTCHA
+        ref={recaptchaRef}
+        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
+      /> */}
+
+      {errorMessages.length > 0 && (
+        <ul className="text-sm text-red-500 space-y-1 text-left">
+          {errorMessages.map((msg, idx) => (
+            <li key={idx}>• {msg}</li>
+          ))}
+        </ul>
+      )}
 
       <button
         type="submit"

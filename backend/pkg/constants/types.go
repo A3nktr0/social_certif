@@ -21,4 +21,6 @@ const (
 	NotifGroupJoinRejected     = "group_join_rejected"
 	NotifGroupInviteRejected   = "group_invite_rejected"
 	NotifGroupEventCreated     = "group_event_created"
+	NotifUserOnline            = "user_online"
+	NotifUserOffline           = "user_offline"
 )

@@ -98,6 +98,11 @@ func main() {
 	r.With(middleware.RequireAuth).Patch("/api/notifications/{id}/read", handlers.MarkNotificationAsRead)
 	r.With(middleware.RequireAuth).Get("/api/notifications/unread/count", handlers.CountUnreadNotifications)
 
+	// chat
+	r.With(middleware.RequireAuth).Get("/api/chat/mutuals", handlers.GetMutualChatUsers)
+	r.With(middleware.RequireAuth).Get("/api/chat/private/{id}", handlers.GetPrivateMessages)
+	r.With(middleware.RequireAuth).Get("/api/chat/group/{id}", handlers.GetGroupMessages)
+
 	// websocket
 	r.With(middleware.RequireAuth).Get("/api/ws", websocket.ServeWS)
 

@@ -1,49 +1,69 @@
+// lib/services/ws.ts
 type WSCallback = (payload: any) => void;
 
-const listeners: Record<string, WSCallback[]> = {};
-let socket: WebSocket | null = null;
+class WebSocketService {
+  private socket: WebSocket | null = null;
+  private listeners: Record<string, Set<WSCallback>> = {};
+  private reconnectDelay = 5000;
+  private url = process.env.NEXT_PUBLIC_WS_URL || "wss://localhost:8080/api/ws"; // configurable
 
-export function connectWebSocket() {
-  if (socket && socket.readyState <= 1) return;
+  connect() {
+    if (this.socket && this.socket.readyState <= 1) return;
 
-  socket = new WebSocket("wss://localhost:8080/api/ws"); // replace with env in prod
+    this.socket = new WebSocket(this.url);
 
-  socket.onopen = () => {
-    console.log("[WS] Connected");
-  };
+    this.socket.onopen = () => {
+      console.info("[WS] Connected");
+    };
 
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (!data.channel) return;
-
-      if (listeners[data.channel]) {
-        listeners[data.channel].forEach((cb) => cb(data));
+    this.socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        const channel = message?.channel;
+        if (channel && this.listeners[channel]) {
+          this.listeners[channel].forEach((cb) => cb(message));
+        }
+      } catch (err) {
+        console.error("[WS] Invalid message:", err);
       }
-    } catch (e) {
-      console.error("[WS] Failed to parse message:", e);
+    };
+
+    this.socket.onclose = () => {
+      console.warn("[WS] Disconnected. Reconnecting...");
+      setTimeout(() => this.connect(), this.reconnectDelay);
+    };
+
+    this.socket.onerror = (err) => {
+      console.error("[WS] Error:", err);
+      this.socket?.close();
+    };
+  }
+
+  send(payload: any) {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(payload));
+    } else {
+      console.warn("[WS] Send failed — socket not open");
     }
-  };
+  }
 
-  socket.onclose = () => {
-    console.warn("[WS] Disconnected, retrying in 5s...");
-    setTimeout(connectWebSocket, 5000);
-  };
+  on(channel: string, callback: WSCallback) {
+    if (!this.listeners[channel]) {
+      this.listeners[channel] = new Set();
+    }
+    this.listeners[channel].add(callback);
+  }
 
-  socket.onerror = (err) => {
-    console.error("[WS] Error:", err);
-    socket?.close();
-  };
+  off(channel: string, callback: WSCallback) {
+    this.listeners[channel]?.delete(callback);
+  }
 }
 
-// Register listener
-export function onChannel(channel: string, callback: WSCallback) {
-  if (!listeners[channel]) listeners[channel] = [];
-  listeners[channel].push(callback);
-}
+const WS = new WebSocketService();
+export default WS;
 
-// Unregister listener
-export function offChannel(channel: string, callback: WSCallback) {
-  if (!listeners[channel]) return;
-  listeners[channel] = listeners[channel].filter((cb) => cb !== callback);
-}
+// Hooks API (optional re-export for convenience)
+export const connectWebSocket = () => WS.connect();
+export const onChannel = (ch: string, cb: WSCallback) => WS.on(ch, cb);
+export const offChannel = (ch: string, cb: WSCallback) => WS.off(ch, cb);
+export const socketSend = (msg: any) => WS.send(msg);

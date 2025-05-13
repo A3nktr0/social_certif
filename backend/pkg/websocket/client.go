@@ -30,7 +30,6 @@ func (c *Client) ReadPump() {
 			handleChatMessage(c, msg)
 
 		case "notifications":
-			// Future: optionally support read receipts or client-side marking
 			log.Printf("Received client-sent notification (ignored): %+v", msg)
 
 		default:

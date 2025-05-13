@@ -1,8 +1,8 @@
 package websocket
 
-import "log"
+const maxContentLength = 1000 // tighter limit for UX and spam control
 
 func handleChatMessage(c *Client, msg Message) {
-	// TODO: dispatch to chat hub or DB
-	log.Printf("Chat message from %s: %s", c.UserID, msg.Content)
+	msg.From = &c.UserID
+	GlobalHub.broadcast <- msg
 }
