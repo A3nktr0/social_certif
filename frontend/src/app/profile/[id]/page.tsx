@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/services/axios";
 import Link from "next/link";
@@ -9,11 +9,11 @@ import FollowingPanel from "@/components/profile/FollowingPanel";
 import AvatarSection from "@/components/profile/AvatarSection";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import TabsSwitcher from "@/components/profile/TabsSwitcher";
+import PostCard from "@/components/posts/PostCard";
+import DeleteProfileModal from "@/components/profile/DeleteProfileModal";
 import { useEffect, useState } from "react";
 import { Profile } from "@/types/profile";
-import { useRouter } from "next/navigation";
 import { Post } from "@/types/post";
-import PostCard from "@/components/posts/PostCard";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -26,13 +26,10 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"followers" | "following">("followers");
-  const [stats, setStats] = useState<
-    { followers: number; following: number } | null
-  >(null);
+  const [stats, setStats] = useState<{ followers: number; following: number } | null>(null);
+  const [followStatus, setFollowStatus] = useState<"none" | "pending" | "accepted">("none");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isOwnProfile = user?.id === id;
-  const [followStatus, setFollowStatus] = useState<
-    "none" | "pending" | "accepted"
-  >("none");
   const router = useRouter();
 
   useEffect(() => {
@@ -61,7 +58,6 @@ export default function ProfilePage() {
         const res = await api.get(`/profile/${safeId}`);
         setProfile(res.data);
 
-        // Also fetch follow status if viewing another user's profile
         if (!isOwnProfile) {
           const followRes = await api.get(`/follow/status/${safeId}`);
           setFollowStatus(followRes.data.status);
@@ -71,12 +67,13 @@ export default function ProfilePage() {
         setError(msg);
       }
     };
+
     const fetchUserPosts = async () => {
       try {
         const res = await api.get(`/posts/by-user/${safeId}`);
         setPosts(Array.isArray(res.data) ? res.data : []);
       } catch {
-        // ignore silently
+        // silent fail
       }
     };
 
@@ -105,11 +102,7 @@ export default function ProfilePage() {
   const handleFollow = async () => {
     try {
       await api.post(`/follow/${safeId}`);
-      if (profile?.is_private) {
-        setFollowStatus("pending");
-      } else {
-        setFollowStatus("accepted");
-      }
+      setFollowStatus(profile?.is_private ? "pending" : "accepted");
     } catch {
       alert("Failed to follow user.");
     }
@@ -156,7 +149,7 @@ export default function ProfilePage() {
             isOwnProfile={isOwnProfile}
             followStatus={followStatus}
           />
-  
+
           {!isOwnProfile && (
             <div>
               {followStatus === "none" && (
@@ -185,7 +178,7 @@ export default function ProfilePage() {
               )}
             </div>
           )}
-  
+
           {isOwnProfile && (
             <>
               <Link
@@ -194,21 +187,30 @@ export default function ProfilePage() {
               >
                 Edit Profile
               </Link>
-  
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded"
+              >
+                Delete My Profile
+              </button>
+
               <TabsSwitcher
                 tab={tab}
                 setTab={setTab}
                 followerCount={stats?.followers || 0}
                 followingCount={stats?.following || 0}
               />
-  
-              {tab === "followers"
-                ? <FollowersPanel refreshStats={fetchStats} />
-                : <FollowingPanel refreshStats={fetchStats} />}
+
+              {tab === "followers" ? (
+                <FollowersPanel refreshStats={fetchStats} />
+              ) : (
+                <FollowingPanel refreshStats={fetchStats} />
+              )}
             </>
           )}
         </aside>
-  
+
         {/* Right: User Activity Feed */}
         <main className="flex-1 space-y-6">
           <h2 className="text-xl font-semibold text-gray-800">User Activity</h2>
@@ -223,7 +225,9 @@ export default function ProfilePage() {
           )}
         </main>
       </div>
+
+      {/* Modal */}
+      <DeleteProfileModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} />
     </div>
   );
-  
 }

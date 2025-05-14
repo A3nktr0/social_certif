@@ -170,3 +170,63 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comments)
 }
+
+type EditCommentRequest struct {
+	Content string `json:"content"`
+}
+
+func EditComment(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	commentID := chi.URLParam(r, "id")
+
+	var body EditCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	safeContent := bluemonday.StrictPolicy().Sanitize(strings.TrimSpace(body.Content))
+	if safeContent == "" {
+		http.Error(w, "Content is required", http.StatusBadRequest)
+		return
+	}
+
+	res, err := db.DB.Exec(`
+		UPDATE comments SET content = $1
+		WHERE id = $2 AND user_id = $3
+	`, safeContent, commentID, userID)
+	if err != nil {
+		http.Error(w, "Failed to update comment", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "Not authorized or comment not found", http.StatusForbidden)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ----------- Delete Comment -----------
+
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	commentID := chi.URLParam(r, "id")
+
+	res, err := db.DB.Exec(`
+		DELETE FROM comments WHERE id = $1 AND user_id = $2
+	`, commentID, userID)
+	if err != nil {
+		http.Error(w, "Failed to delete comment", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "Not authorized or comment not found", http.StatusForbidden)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

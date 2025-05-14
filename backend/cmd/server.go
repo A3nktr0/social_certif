@@ -27,6 +27,7 @@ func main() {
 
 	// Authenticated
 	r.With(middleware.RequireAuth).Get("/api/me", handlers.Me)
+	r.With(middleware.RequireAuth).Delete("/api/me", handlers.DeleteMyProfile)
 	r.With(middleware.RequireAuth).Get("/api/hello", HelloUser)
 
 	// Profile access
@@ -49,6 +50,8 @@ func main() {
 	r.With(middleware.RequireAuth).Get("/api/posts/feed", handlers.GetFeed)
 	r.With(middleware.RequireAuth).Get("/api/posts/{id}", handlers.GetPostByID)
 	r.With(middleware.RequireAuth).Get("/api/posts/by-user/{id}", handlers.GetPostsByUser)
+	r.With(middleware.RequireAuth).Put("/api/posts/{id}", handlers.EditPost)
+	r.With(middleware.RequireAuth).Delete("/api/posts/{id}", handlers.DeletePost)
 
 	// Likes
 	r.With(middleware.RequireAuth).Post("/api/posts/{id}/like", handlers.LikePost)
@@ -59,6 +62,8 @@ func main() {
 	// Comments
 	r.With(middleware.RequireAuth).Post("/api/posts/{id}/comments", handlers.CreateComment)
 	r.With(middleware.RequireAuth).Get("/api/posts/{id}/comments", handlers.GetComments)
+	r.With(middleware.RequireAuth).Put("/api/comments/{id}", handlers.EditComment)
+	r.With(middleware.RequireAuth).Delete("/api/comments/{id}", handlers.DeleteComment)
 
 	// Explore
 	r.With(middleware.RequireAuth).Get("/api/explore", handlers.ExploreUsers)

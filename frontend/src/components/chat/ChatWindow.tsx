@@ -61,16 +61,15 @@ export default function ChatWindow({ type, targetId }: Props) {
 
       if (msg.event === "typing") {
         const typingTarget = msg.data?.group_id || msg.sender_id;
-        const isRelevantTyping =
-          (type === "private" && typingTarget === targetId) ||
-          (type === "group" && msg.data?.group_id === targetId);
-
-        if (isRelevantTyping) {
-          setIsTyping(msg.content === "typing");
-          if (msg.data?.nickname) {
-            setTypingUser(msg.data.nickname);
-          }
-        }
+        const isTyping = msg.content === "typing";
+        setIsTyping(isTyping);
+        setTypingUser(msg.data?.nickname || msg.sender_id);
+        if (isTyping) {
+          setTimeout(() => {
+            setIsTyping(false);
+            setTypingUser("");
+          }, 2000);
+        }  
         return;
       }
 

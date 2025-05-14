@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -131,7 +132,6 @@ func GetGroupPosts(w http.ResponseWriter, r *http.Request) {
 	groupID := chi.URLParam(r, "id")
 	userID := middleware.GetUserID(r)
 
-	// Check group membership
 	var isMember bool
 	err := db.DB.QueryRow(`
 		SELECT EXISTS (
@@ -183,10 +183,11 @@ func GetGroupPosts(w http.ResponseWriter, r *http.Request) {
 	var posts []Post
 	for rows.Next() {
 		var p Post
-		var nickname string
+		var nickname, avatar, image sql.NullString
+
 		err := rows.Scan(
-			&p.ID, &p.UserID, &p.Content, &p.Image, &p.CreatedAt,
-			&nickname, &p.Author.Avatar,
+			&p.ID, &p.UserID, &p.Content, &image, &p.CreatedAt,
+			&nickname, &avatar,
 			&p.LikeCount, &p.LikedByUser,
 		)
 		if err != nil {
@@ -194,9 +195,23 @@ func GetGroupPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		p.Image = ""
+		if image.Valid {
+			p.Image = image.String
+		}
+
 		p.Visibility = "group"
 		p.Author.ID = p.UserID
-		p.Author.Name = nickname
+		if nickname.Valid {
+			p.Author.Name = nickname.String
+		} else {
+			p.Author.Name = "Unknown"
+		}
+
+		p.Author.Avatar = "/static/avatars/default.jpg"
+		if avatar.Valid && avatar.String != "" {
+			p.Author.Avatar = avatar.String
+		}
 
 		posts = append(posts, p)
 	}

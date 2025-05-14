@@ -199,16 +199,23 @@ func GetFeed(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p FeedPost
 		var firstName, lastName, nickname, authorID string
-		var avatar sql.NullString
+		var avatar, image sql.NullString
 
 		err := rows.Scan(
-			&p.ID, &p.UserID, &p.Content, &p.Image, &p.Visibility, &p.CreatedAt,
+			&p.ID, &p.UserID, &p.Content, &image, &p.Visibility, &p.CreatedAt,
 			&authorID, &firstName, &lastName, &nickname, &avatar,
 			&p.LikeCount, &p.LikedByUser,
 		)
+
 		if err != nil {
 			http.Error(w, "Error reading feed", http.StatusInternalServerError)
 			return
+		}
+
+		if image.Valid {
+			p.Image = image.String
+		} else {
+			p.Image = ""
 		}
 
 		name := nickname
@@ -380,15 +387,22 @@ func GetPostByID(w http.ResponseWriter, r *http.Request) {
 		} `json:"author"`
 	}
 
-	var firstName, lastName, nickname, avatar sql.NullString
+	var firstName, lastName, nickname, avatar, image sql.NullString
+
 	err = row.Scan(
-		&post.ID, &post.UserID, &post.Content, &post.Image, &post.Visibility, &post.CreatedAt,
+		&post.ID, &post.UserID, &post.Content, &image, &post.Visibility, &post.CreatedAt,
 		&firstName, &lastName, &nickname, &avatar,
 	)
 	if err != nil {
 		fmt.Println("Error loading post:", err)
 		http.Error(w, "Failed to load post", http.StatusInternalServerError)
 		return
+	}
+
+	if image.Valid {
+		post.Image = image.String
+	} else {
+		post.Image = ""
 	}
 
 	post.Author.ID = post.UserID
@@ -402,13 +416,9 @@ func GetPostByID(w http.ResponseWriter, r *http.Request) {
 		post.Author.Avatar = avatar.String
 	}
 
-	// Fetch like count
 	var likeCount int
-	_ = db.DB.QueryRow(`
-		SELECT COUNT(*) FROM post_likes WHERE post_id = $1
-	`, postID).Scan(&likeCount)
+	_ = db.DB.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = $1`, postID).Scan(&likeCount)
 
-	// Check if user liked
 	var likedByUser bool
 	_ = db.DB.QueryRow(`
 		SELECT EXISTS (
@@ -416,7 +426,6 @@ func GetPostByID(w http.ResponseWriter, r *http.Request) {
 		)
 	`, postID, userID).Scan(&likedByUser)
 
-	// Final response object
 	response := map[string]interface{}{
 		"id":            post.ID,
 		"user_id":       post.UserID,
@@ -533,4 +542,132 @@ func GetPostsByUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
+}
+
+// ----------- Edit Post -----------
+
+type EditPostRequest struct {
+	Content  string `json:"content"`
+	ImageURL string `json:"imageUrl"` // Optional: "" means delete, existing value means keep, new means replace
+}
+
+func EditPost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	postID := chi.URLParam(r, "id")
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	rawContent := strings.TrimSpace(r.FormValue("content"))
+	if rawContent == "" && r.MultipartForm.File["image"] == nil {
+		http.Error(w, "Content or image required", http.StatusBadRequest)
+		return
+	}
+
+	policy := bluemonday.StrictPolicy()
+	content := policy.Sanitize(rawContent)
+
+	// Optional: image deletion
+	imageURL := r.FormValue("image_url") // can be empty for removal
+
+	// Check if a new image is uploaded
+	file, handler, err := r.FormFile("image")
+	if err == nil && file != nil {
+		defer file.Close()
+
+		buffer := make([]byte, 512)
+		if _, err := file.Read(buffer); err != nil {
+			http.Error(w, "Could not read file header", http.StatusBadRequest)
+			return
+		}
+		contentType := http.DetectContentType(buffer)
+		if !strings.HasPrefix(contentType, "image/") {
+			http.Error(w, "Invalid image type", http.StatusBadRequest)
+			return
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, "Failed to reset file reader", http.StatusInternalServerError)
+			return
+		}
+
+		ext := strings.ToLower(filepath.Ext(handler.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+			http.Error(w, "Invalid file extension", http.StatusBadRequest)
+			return
+		}
+
+		if err := os.MkdirAll("uploads/posts", os.ModePerm); err != nil {
+			http.Error(w, "Failed to create upload directory", http.StatusInternalServerError)
+			return
+		}
+
+		filename := "post_" + uuid.New().String() + ext
+		savePath := filepath.Join("uploads/posts", filename)
+
+		out, err := os.Create(savePath)
+		if err != nil {
+			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			return
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, file); err != nil {
+			http.Error(w, "Failed to write image", http.StatusInternalServerError)
+			return
+		}
+
+		imageURL = "/static/posts/" + filename
+	}
+
+	// If imageURL is empty, treat it as deletion
+	var imageColumn interface{}
+	if imageURL == "" {
+		imageColumn = nil
+	} else {
+		imageColumn = imageURL
+	}
+
+	res, err := db.DB.Exec(`
+		UPDATE posts 
+		SET content = $1, image = $2
+		WHERE id = $3 AND user_id = $4
+	`, content, imageColumn, postID, userID)
+
+	if err != nil {
+		http.Error(w, "Failed to update post", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "Not authorized or post not found", http.StatusForbidden)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ----------- Delete Post -----------
+
+func DeletePost(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	postID := chi.URLParam(r, "id")
+
+	res, err := db.DB.Exec(`
+		DELETE FROM posts WHERE id = $1 AND user_id = $2
+	`, postID, userID)
+	if err != nil {
+		http.Error(w, "Failed to delete post", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "Not authorized or post not found", http.StatusForbidden)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
