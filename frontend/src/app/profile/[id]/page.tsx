@@ -14,6 +14,7 @@ import DeleteProfileModal from "@/components/profile/DeleteProfileModal";
 import { useEffect, useState } from "react";
 import { Profile } from "@/types/profile";
 import { Post } from "@/types/post";
+import Loading from "@/app/loading";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -127,9 +128,7 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="max-w-md mx-auto mt-10 text-center text-gray-500">
-        Loading profile...
-      </div>
+      <Loading />
     );
   }
 

@@ -14,7 +14,7 @@ export default function DesktopNavbar() {
   if (!user) return null;
 
   return (
-    <nav className="hidden md:flex justify-between items-center bg-white border-b border-gray-200 shadow-sm px-6 py-3">
+    <nav className="hidden md:flex justify-between items-center bg-white border-b border-gray-200 shadow-sm px-6 py-3 sticky top-0 z-20">
       <div className="text-xl font-bold text-blue-600 tracking-tight">
         MySocial
       </div>

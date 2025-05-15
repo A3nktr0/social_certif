@@ -22,8 +22,8 @@ export default function MobileNavbar() {
         <div className="flex items-center gap-3">
           <button onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen
-              ? <X className="w-6 h-6" />
-              : <Menu className="w-6 h-6" />}
+              ? <X className="w-6 h-6 stroke-blue-600" />
+              : <Menu className="w-6 h-6 stroke-blue-600" />}
           </button>
           <span className="text-lg font-bold text-blue-600">MySocial</span>
         </div>
