@@ -4,6 +4,7 @@ export interface Event {
   description: string;
   event_time: string;
   created_at: string;
+  creator_nickname: string
   user_response?: "going" | "not_going" | null;
 }
 

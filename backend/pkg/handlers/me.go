@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"socialbackend/pkg/db"
 	"socialbackend/pkg/middleware"
@@ -81,13 +83,29 @@ func Me(w http.ResponseWriter, r *http.Request) {
 func DeleteMyProfile(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 
-	_, err := db.DB.Exec(`DELETE FROM users WHERE id = $1`, userID)
+	var avatarPath string
+	err := db.DB.QueryRow(`SELECT avatar FROM users WHERE id = $1`, userID).Scan(&avatarPath)
+	if err != nil {
+		http.Error(w, "Failed to retrieve user avatar", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = db.DB.Exec(`DELETE FROM users WHERE id = $1`, userID)
 	if err != nil {
 		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		return
 	}
 
-	// Clear the session cookie
+	if avatarPath != "/static/avatars/default.jpg" {
+		filePath := strings.Replace(avatarPath, "/static/avatars/", "/uploads/avatars/", 1)
+
+		err = os.Remove("." + filePath) // relative to project root
+		if err != nil && !os.IsNotExist(err) {
+			http.Error(w, "Failed to delete avatar file", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    "",

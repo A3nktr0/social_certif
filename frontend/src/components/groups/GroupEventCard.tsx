@@ -36,7 +36,10 @@ export default function GroupEventCard({ event, groupId }: Props) {
       </Link>
       <p className="text-sm text-gray-600">{event.description}</p>
       <p className="text-xs text-gray-400">
-        🗓 {new Date(event.event_time).toLocaleString()}
+        🗓 {new Date(event.event_time).toLocaleString('fr')}
+      </p>
+      <p className="text-xs text-gray-500">
+        👤 <span className="font-medium text-gray-700">{event.creator_nickname}</span>
       </p>
 
       <div className="flex gap-3 mt-2">

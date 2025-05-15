@@ -128,7 +128,7 @@ export default function NotificationItem({
           {/* <strong>{first_name} {last_name}</strong>: {content} */}
           <strong>{nickname}</strong>: {content}
           <div className="text-xs text-gray-400 mt-1">
-            {new Date(createdAt).toLocaleString()}
+            {new Date(createdAt).toLocaleString('fr')}
           </div>
         </div>
 

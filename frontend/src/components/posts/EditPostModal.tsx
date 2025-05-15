@@ -101,7 +101,7 @@ export default function EditPostModal({
               setImageUrl(""); // Clear old image when new is chosen
             }
           }}
-          className="block mt-2"
+          className="block mt-2 text-gray-900 border border-gray-300 rounded-lg text-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
         <div className="flex justify-end gap-3">

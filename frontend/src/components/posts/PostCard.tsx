@@ -53,7 +53,7 @@ export default function PostCard({ post }: { post: Post }) {
             @{post.author.name}
           </Link>
           <p className="text-xs text-gray-400">
-            {new Date(post.created_at).toLocaleString()}
+            {new Date(post.created_at).toLocaleString('fr')}
           </p>
         </div>
       </div>

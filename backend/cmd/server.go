@@ -80,6 +80,8 @@ func main() {
 	r.With(middleware.RequireAuth).Post("/api/groups/{id}/reject-request/{userId}", handlers.RejectJoinRequest)
 	r.With(middleware.RequireAuth).Post("/api/groups/{id}/accept-invite", handlers.AcceptInvite)
 	r.With(middleware.RequireAuth).Post("/api/groups/{id}/reject-invite", handlers.RejectInvite)
+	r.With(middleware.RequireAuth).Put("/api/groups/{id}", handlers.UpdateGroup)
+	r.With(middleware.RequireAuth).Delete("/api/groups/{id}", handlers.DeleteGroup)
 
 	// Group members
 	r.With(middleware.RequireAuth).Get("/api/groups/{id}/members", handlers.GetGroupMembers)

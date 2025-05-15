@@ -13,6 +13,7 @@ import (
 	"socialbackend/pkg/db"
 	"socialbackend/pkg/middleware"
 	"socialbackend/pkg/notifications"
+	"socialbackend/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -135,6 +136,186 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		"group_id": groupID,
 		"message":  "Group created",
 	})
+}
+
+func DeleteGroup(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+	userID := middleware.GetUserID(r)
+
+	var creatorID string
+	err := db.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = $1`, groupID).Scan(&creatorID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Group not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	if creatorID != userID {
+		http.Error(w, "Unauthorized", http.StatusForbidden)
+		return
+	}
+
+	err = utils.DeleteImageFromTable(
+		db.DB,
+		"groups",
+		"id",
+		groupID,
+		userID,
+		"avatar",
+		"/static/groups/",
+		"/uploads/groups/",
+		"default.jpg",
+	)
+	if err != nil {
+		http.Error(w, "Failed to delete group avatar", http.StatusInternalServerError)
+		return
+	}
+
+	tx, err := db.DB.Begin()
+	if err != nil {
+		http.Error(w, "Transaction error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec(`DELETE FROM groups WHERE id = $1`, groupID)
+	if err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to delete group", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Commit failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func UpdateGroup(w http.ResponseWriter, r *http.Request) {
+	groupID := chi.URLParam(r, "id")
+	userID := middleware.GetUserID(r)
+
+	var existingAvatar, creatorID string
+	err := db.DB.QueryRow(`SELECT avatar, creator_id FROM groups WHERE id = $1`, groupID).Scan(&existingAvatar, &creatorID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Group not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	if creatorID != userID {
+		http.Error(w, "Unauthorized", http.StatusForbidden)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	rawName := strings.TrimSpace(r.FormValue("name"))
+	rawDesc := strings.TrimSpace(r.FormValue("description"))
+	deleteAvatar := r.FormValue("delete_avatar") == "true"
+
+	if rawName == "" {
+		http.Error(w, "Group name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Sanitize input
+	policy := bluemonday.StrictPolicy()
+	name := policy.Sanitize(rawName)
+	description := policy.Sanitize(rawDesc)
+
+	const defaultAvatar = "/static/avatars/default.jpg"
+	var newAvatar string
+
+	// Handle optional avatar upload
+	file, handler, err := r.FormFile("avatar")
+	if err == nil && file != nil {
+		defer file.Close()
+
+		buffer := make([]byte, 512)
+		if _, err := file.Read(buffer); err != nil {
+			http.Error(w, "Could not read avatar header", http.StatusBadRequest)
+			return
+		}
+		if !strings.HasPrefix(http.DetectContentType(buffer), "image/") {
+			http.Error(w, "Invalid image format", http.StatusBadRequest)
+			return
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, "Failed to reset file reader", http.StatusInternalServerError)
+			return
+		}
+
+		ext := strings.ToLower(filepath.Ext(handler.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+			http.Error(w, "Unsupported avatar file extension", http.StatusBadRequest)
+			return
+		}
+
+		if err := os.MkdirAll("uploads/groups", os.ModePerm); err != nil {
+			http.Error(w, "Failed to create upload directory", http.StatusInternalServerError)
+			return
+		}
+
+		filename := "group_" + uuid.New().String() + ext
+		savePath := filepath.Join("uploads/groups", filename)
+		out, err := os.Create(savePath)
+		if err != nil {
+			http.Error(w, "Failed to save avatar", http.StatusInternalServerError)
+			return
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, file); err != nil {
+			http.Error(w, "Failed to write avatar", http.StatusInternalServerError)
+			return
+		}
+
+		newAvatar = "/static/groups/" + filename
+	}
+
+	// Determine what the final avatar should be
+	finalAvatar := existingAvatar
+	if deleteAvatar {
+		finalAvatar = defaultAvatar
+	}
+	if newAvatar != "" {
+		finalAvatar = newAvatar
+	}
+
+	// Update group in DB
+	_, err = db.DB.Exec(`UPDATE groups SET name = $1, description = $2, avatar = $3 WHERE id = $4`,
+		name, description, finalAvatar, groupID)
+	if err != nil {
+		http.Error(w, "Update failed", http.StatusInternalServerError)
+		return
+	}
+
+	// If avatar changed or deleted, remove old file (if not default)
+	if (deleteAvatar || newAvatar != "") && existingAvatar != "" && existingAvatar != defaultAvatar {
+		_ = utils.DeleteImageFromTable(
+			db.DB,
+			"groups",
+			"id",
+			groupID,
+			userID,
+			"avatar",
+			"/static/groups/",
+			"/uploads/groups/",
+			"default.jpg",
+		)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Group updated"})
 }
 
 func ListUserGroups(w http.ResponseWriter, r *http.Request) {

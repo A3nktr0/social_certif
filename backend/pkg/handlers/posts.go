@@ -14,6 +14,7 @@ import (
 	"socialbackend/pkg/authz"
 	"socialbackend/pkg/db"
 	"socialbackend/pkg/middleware"
+	"socialbackend/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -561,7 +562,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rawContent := strings.TrimSpace(r.FormValue("content"))
-	if rawContent == "" && r.MultipartForm.File["image"] == nil {
+	if rawContent == "" && r.MultipartForm.File["image"] == nil && r.FormValue("image_url") == "" {
 		http.Error(w, "Content or image required", http.StatusBadRequest)
 		return
 	}
@@ -569,10 +570,21 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 	policy := bluemonday.StrictPolicy()
 	content := policy.Sanitize(rawContent)
 
-	// Optional: image deletion
-	imageURL := r.FormValue("image_url") // can be empty for removal
+	// Step 1: Get existing image path for deletion check
+	var existingImage sql.NullString
+	err := db.DB.QueryRow(`SELECT image FROM posts WHERE id = $1 AND user_id = $2`, postID, userID).Scan(&existingImage)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Post not found or unauthorized", http.StatusForbidden)
+		return
+	} else if err != nil {
+		http.Error(w, "Failed to retrieve existing image", http.StatusInternalServerError)
+		return
+	}
 
-	// Check if a new image is uploaded
+	// Optional image deletion or replacement
+	imageURL := r.FormValue("image_url") // "" = remove, value = keep (or will be overridden below)
+
+	// Step 2: Handle new image upload
 	file, handler, err := r.FormFile("image")
 	if err == nil && file != nil {
 		defer file.Close()
@@ -582,8 +594,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Could not read file header", http.StatusBadRequest)
 			return
 		}
-		contentType := http.DetectContentType(buffer)
-		if !strings.HasPrefix(contentType, "image/") {
+		if !strings.HasPrefix(http.DetectContentType(buffer), "image/") {
 			http.Error(w, "Invalid image type", http.StatusBadRequest)
 			return
 		}
@@ -621,7 +632,23 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		imageURL = "/static/posts/" + filename
 	}
 
-	// If imageURL is empty, treat it as deletion
+	// Step 3: Determine if the old image should be deleted
+	imageChanged := (imageURL == "" && existingImage.Valid) || (imageURL != "" && imageURL != existingImage.String)
+	if imageChanged && existingImage.Valid && existingImage.String != "/static/posts/default.jpg" {
+		_ = utils.DeleteImageFromTable(
+			db.DB,
+			"posts",
+			"id",
+			postID,
+			userID,
+			"image",
+			"/static/posts/",
+			"/uploads/posts/",
+			"default.jpg",
+		)
+	}
+
+	// Step 4: Prepare value for DB update
 	var imageColumn interface{}
 	if imageURL == "" {
 		imageColumn = nil
@@ -629,6 +656,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		imageColumn = imageURL
 	}
 
+	// Step 5: Update the post
 	res, err := db.DB.Exec(`
 		UPDATE posts 
 		SET content = $1, image = $2
@@ -655,17 +683,29 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	postID := chi.URLParam(r, "id")
 
-	res, err := db.DB.Exec(`
+	// Delete the image using the helper
+	err := utils.DeleteImageFromTable(
+		db.DB,
+		"posts",           // table name
+		"id",              // id field
+		postID,            // post ID
+		userID,            // user ID for ownership
+		"image",           // image column name
+		"/static/posts/",  // public URL prefix
+		"/uploads/posts/", // actual upload path
+		"default.jpg",     // default image filename
+	)
+	if err != nil {
+		http.Error(w, "Failed to delete post image", http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the post itself
+	_, err = db.DB.Exec(`
 		DELETE FROM posts WHERE id = $1 AND user_id = $2
 	`, postID, userID)
 	if err != nil {
 		http.Error(w, "Failed to delete post", http.StatusInternalServerError)
-		return
-	}
-
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		http.Error(w, "Not authorized or post not found", http.StatusForbidden)
 		return
 	}
 

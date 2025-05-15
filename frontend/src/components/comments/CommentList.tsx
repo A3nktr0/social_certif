@@ -14,6 +14,8 @@ export default function CommentList({ postId }: { postId: string }) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState("");
+  const [editedImageFile, setEditedImageFile] = useState<File | null>(null);
+  const [editedImageUrl, setEditedImageUrl] = useState<string>("");
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
@@ -29,11 +31,21 @@ export default function CommentList({ postId }: { postId: string }) {
   }, [postId]);
 
   const handleUpdate = async (commentId: string) => {
+    const formData = new FormData();
+    formData.append("content", DOMPurify.sanitize(editedContent.trim()));
+    formData.append("image_url", editedImageUrl ?? "");
+
+    if (editedImageFile) {
+      formData.append("image", editedImageFile);
+    }
+
     try {
-      await api.put(`/comments/${commentId}`, {
-        content: DOMPurify.sanitize(editedContent.trim()),
+      await api.put(`/comments/${commentId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setEditingId(null);
+      setEditedImageFile(null);
+      setEditedImageUrl("");
       fetchComments();
     } catch {
       alert("Failed to update comment.");
@@ -79,6 +91,8 @@ export default function CommentList({ postId }: { postId: string }) {
                       onClick={() => {
                         setEditingId(c.id);
                         setEditedContent(c.content);
+                        setEditedImageUrl(c.image ?? "");
+                        setEditedImageFile(null);
                       }}
                       className="hover:underline text-blue-600"
                     >
@@ -102,9 +116,49 @@ export default function CommentList({ postId }: { postId: string }) {
                     onChange={(e) => setEditedContent(e.target.value)}
                     rows={3}
                   />
+
+                  {editedImageUrl && !editedImageFile && (
+                    <div className="relative mt-2">
+                      <img
+                        src={editedImageUrl}
+                        alt="comment image"
+                        className="rounded border max-h-48 object-contain"
+                      />
+                      <button
+                        onClick={() => setEditedImageUrl("")}
+                        className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded"
+                      >
+                        Remove Image
+                      </button>
+                    </div>
+                  )}
+
+                  {editedImageFile && (
+                    <p className="text-xs mt-1 text-gray-600">
+                      Selected: {editedImageFile.name}
+                    </p>
+                  )}
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setEditedImageFile(file);
+                        setEditedImageUrl("");
+                      }
+                    }}
+                    className="block text-xs mt-2 text-gray-900 border border-gray-300 rounded-lg text-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+
                   <div className="flex justify-end gap-2 mt-2 text-sm">
                     <button
-                      onClick={() => setEditingId(null)}
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditedImageFile(null);
+                        setEditedImageUrl("");
+                      }}
                       className="text-gray-500"
                     >
                       Cancel
@@ -133,7 +187,7 @@ export default function CommentList({ postId }: { postId: string }) {
                     />
                   )}
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(c.created_at).toLocaleString()}
+                    {new Date(c.created_at).toLocaleString('fr')}
                   </p>
                 </>
               )}

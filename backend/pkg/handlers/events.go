@@ -146,6 +146,7 @@ func DeleteGroupEvent(w http.ResponseWriter, r *http.Request) {
 		"message": "Event deleted successfully",
 	})
 }
+
 func GetGroupEvents(w http.ResponseWriter, r *http.Request) {
 	groupID := chi.URLParam(r, "id")
 	userID := middleware.GetUserID(r)
@@ -254,43 +255,30 @@ func RSVPEvent(w http.ResponseWriter, r *http.Request) {
 		"message": "RSVP recorded",
 	})
 }
+
 func GetGroupEventDetail(w http.ResponseWriter, r *http.Request) {
 	groupID := chi.URLParam(r, "id")
 	eventID := chi.URLParam(r, "eventId")
 	userID := middleware.GetUserID(r)
 
-	// Verify group membership
-	var isMember bool
+	// Check if user is either an admin or the event creator
+	var isAuthorized bool
 	err := db.DB.QueryRow(`
 		SELECT EXISTS (
-			SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2 AND is_admin = true
 		)
-	`, groupID, userID).Scan(&isMember)
-	if err != nil || !isMember {
-		http.Error(w, "Unauthorized", http.StatusForbidden)
+		OR EXISTS (
+			SELECT 1 FROM events
+			WHERE id = $3 AND group_id = $1 AND creator_id = $2
+		)
+	`, groupID, userID, eventID).Scan(&isAuthorized)
+	if err != nil || !isAuthorized {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	// Check if user is admin
-	// var isAdmin bool
-	// _ = db.DB.QueryRow(`
-	// 	SELECT is_admin FROM group_members
-	// 	WHERE group_id = $1 AND user_id = $2
-	// `, groupID, userID).Scan(&isAdmin)
-
-	// Check if user is event creator
-	var isCreator bool
-	err = db.DB.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1 FROM events WHERE id = $1 AND group_id = $2 AND creator_id = $3
-		)
-	`, eventID, groupID, userID).Scan(&isCreator)
-	if err != nil {
-		http.Error(w, "Failed to verify event creator", http.StatusInternalServerError)
-		return
-	}
-
-	// Get event info
+	// Fetch event details
 	var event struct {
 		ID          string    `json:"id"`
 		Title       string    `json:"title"`
@@ -299,38 +287,34 @@ func GetGroupEventDetail(w http.ResponseWriter, r *http.Request) {
 		CreatorID   string    `json:"creator_id"`
 		CreatedAt   time.Time `json:"created_at"`
 		UserRSVP    *string   `json:"user_response,omitempty"`
-		// IsAdmin     bool      `json:"is_admin"`
-		IsCreator bool `json:"is_creator"`
+		CreatorName string    `json:"creator_nickname"`
 	}
 
 	err = db.DB.QueryRow(`
-		SELECT id, title, description, event_time, creator_id, created_at
-		FROM events
-		WHERE id = $1 AND group_id = $2
+		SELECT e.id, e.title, e.description, e.event_time, e.creator_id, e.created_at, u.nickname
+		FROM events e
+		JOIN users u ON u.id = e.creator_id
+		WHERE e.id = $1 AND e.group_id = $2
 	`, eventID, groupID).Scan(
 		&event.ID, &event.Title, &event.Description,
-		&event.EventTime, &event.CreatorID, &event.CreatedAt,
+		&event.EventTime, &event.CreatorID, &event.CreatedAt, &event.CreatorName,
 	)
 	if err != nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
 		return
 	}
 
-	// Fetch current user's RSVP if exists
+	// Get user's RSVP
 	var rsvp sql.NullString
 	_ = db.DB.QueryRow(`
 		SELECT response FROM event_rsvps
 		WHERE event_id = $1 AND user_id = $2
 	`, eventID, userID).Scan(&rsvp)
-
 	if rsvp.Valid {
 		event.UserRSVP = &rsvp.String
 	}
 
-	// event.IsAdmin = isAdmin
-	event.IsCreator = isCreator
-
-	// Get RSVP stats
+	// Fetch RSVP stats
 	type RSVPUser struct {
 		UserID   string `json:"user_id"`
 		Nickname string `json:"nickname"`
@@ -360,6 +344,7 @@ func GetGroupEventDetail(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Return response without any role flags
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"event": event,
@@ -372,48 +357,47 @@ func UpdateGroupEvent(w http.ResponseWriter, r *http.Request) {
 	eventID := chi.URLParam(r, "eventId")
 	userID := middleware.GetUserID(r)
 
-	// var isAdmin bool
-	// err := db.DB.QueryRow(`
-	// 	SELECT is_admin FROM group_members
-	// 	WHERE group_id = $1 AND user_id = $2
-	// `, groupID, userID).Scan(&isAdmin)
-	// if err != nil || !isAdmin {
-	// 	http.Error(w, "Unauthorized", http.StatusForbidden)
-	// 	return
-	// }
-
-	// Check if user is event creator
-	var isCreator bool
+	// Check if the user is either admin or the event creator
+	var isAuthorized bool
 	err := db.DB.QueryRow(`
 		SELECT EXISTS (
-			SELECT 1 FROM events WHERE id = $1 AND group_id = $2 AND creator_id = $3
+			SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND is_admin = true
 		)
-	`, eventID, groupID, userID).Scan(&isCreator)
+		OR EXISTS (
+			SELECT 1 FROM events WHERE id = $3 AND group_id = $1 AND creator_id = $2
+		)
+	`, groupID, userID, eventID).Scan(&isAuthorized)
+
 	if err != nil {
-		http.Error(w, "Failed to verify event creator", http.StatusInternalServerError)
-		return
-	}
-	if !isCreator {
-		http.Error(w, "Only event creator can update this event", http.StatusForbidden)
+		http.Error(w, "Authorization check failed", http.StatusInternalServerError)
 		return
 	}
 
+	if !isAuthorized {
+		http.Error(w, "Forbidden: Only the event creator or a group admin may update this event", http.StatusForbidden)
+		return
+	}
+
+	// Parse request body
 	var req CreateEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
+	// Perform update
 	_, err = db.DB.Exec(`
 		UPDATE events
 		SET title = $1, description = $2, event_time = $3
 		WHERE id = $4 AND group_id = $5
 	`, req.Title, req.Description, req.EventTime, eventID, groupID)
+
 	if err != nil {
 		http.Error(w, "Failed to update event", http.StatusInternalServerError)
 		return
 	}
 
+	// Fetch updated event data
 	var updatedEvent struct {
 		ID          string    `json:"id"`
 		Title       string    `json:"title"`
@@ -421,17 +405,24 @@ func UpdateGroupEvent(w http.ResponseWriter, r *http.Request) {
 		EventTime   time.Time `json:"event_time"`
 		CreatedAt   time.Time `json:"created_at"`
 	}
+
 	err = db.DB.QueryRow(`
 		SELECT id, title, description, event_time, created_at
 		FROM events
 		WHERE id = $1 AND group_id = $2
-	`, eventID, groupID).Scan(&updatedEvent.ID, &updatedEvent.Title, &updatedEvent.Description, &updatedEvent.EventTime, &updatedEvent.CreatedAt)
+	`, eventID, groupID).Scan(
+		&updatedEvent.ID, &updatedEvent.Title, &updatedEvent.Description,
+		&updatedEvent.EventTime, &updatedEvent.CreatedAt,
+	)
 
 	if err != nil {
 		http.Error(w, "Failed to fetch updated event", http.StatusInternalServerError)
 		return
 	}
 
+	// Return updated event
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"event": updatedEvent})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"event": updatedEvent,
+	})
 }

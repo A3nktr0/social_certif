@@ -20,9 +20,10 @@ export default function EventDetailPage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
-  const [isCreator, setIsCreator] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const { user, loading } = useAuth();
+
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -30,37 +31,31 @@ export default function EventDetailPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await api.get(`/groups/${groupId}/events/${eventId}`);
-        setEvent(res.data.event);
-        setRsvps(res.data.rsvps || []);
-        setIsCreator(res.data.event?.is_creator || false);
-      } catch {
-        router.replace(`/groups/${groupId}`);
-      } finally {
-        // setLoading(false);
-      }
-    };
-    fetchEvent();
-  }, [groupId, eventId, router]);
-
-  const refreshEvent = async () => {
+  const fetchEvent = async () => {
     try {
       const res = await api.get(`/groups/${groupId}/events/${eventId}`);
       setEvent(res.data.event);
       setRsvps(res.data.rsvps || []);
-      setIsCreator(res.data.event?.is_creator || false);
-      router.replace(`/groups/${groupId}/events/${eventId}`);
-    } catch {
-      router.replace(`/groups/${groupId}`);
+      setAccessDenied(false);
+    } catch (err: any) {
+      if (err?.response?.status === 403 || err?.response?.status === 404) {
+        setAccessDenied(true);
+      } else {
+        router.replace(`/groups/${groupId}`);
+      }
     }
   };
 
   useEffect(() => {
-    refreshEvent();
-  }, [groupId, eventId, router]);
+    if (user && !loading) {
+      fetchEvent();
+    }
+  }, [groupId, eventId, user, loading]);
+
+  const refreshEvent = async () => {
+    await fetchEvent();
+    router.replace(`/groups/${groupId}/events/${eventId}`);
+  };
 
   if (loading) {
     return (
@@ -70,15 +65,14 @@ export default function EventDetailPage() {
     );
   }
 
-  if (!event || !isCreator) {
+  if (accessDenied) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="bg-white max-w-sm w-full p-6 rounded-xl shadow text-center space-y-4 border">
           <div className="text-4xl">🔒</div>
           <h2 className="text-lg font-semibold text-gray-800">Access Denied</h2>
           <p className="text-sm text-gray-600">
-            You don’t have permission to view this event. Only group admins can
-            access event details.
+            You don’t have permission to view this event. Only group admins or the creator can access event details.
           </p>
           <button
             onClick={() => router.back()}
@@ -89,6 +83,10 @@ export default function EventDetailPage() {
         </div>
       </main>
     );
+  }
+
+  if (!event) {
+    return null;
   }
 
   return (

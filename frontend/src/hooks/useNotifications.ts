@@ -9,11 +9,6 @@ export function useNotifications(userId?: string | null) {
   useEffect(() => {
     if (!userId) return;
 
-    // fetch("/api/notifications/unread/count", { credentials: "include" })
-    //   .then((res) => res.json())
-    //   .then((data) => setUnreadCount(data.count || 0))
-    //   .catch(() => setUnreadCount(0));
-
     axios.get("/api/notifications/unread/count", {
       withCredentials: true,
     })

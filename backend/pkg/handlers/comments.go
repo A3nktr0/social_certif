@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"socialbackend/pkg/db"
 	"socialbackend/pkg/middleware"
+	"socialbackend/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -142,9 +144,10 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	var comments []map[string]interface{}
 	for rows.Next() {
 		var (
-			commentID, content, image, createdAt string
-			userID, nickname, avatar             string
+			commentID, content, createdAt, userID string
+			image, nickname, avatar               sql.NullString
 		)
+
 		err := rows.Scan(
 			&commentID, &content, &image, &createdAt,
 			&userID, &nickname, &avatar,
@@ -157,12 +160,17 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		comments = append(comments, map[string]interface{}{
 			"id":         commentID,
 			"content":    content,
-			"image":      image,
+			"image":      image.String, // empty string if null
 			"created_at": createdAt,
 			"user": map[string]string{
 				"id":       userID,
-				"nickname": nickname,
-				"avatar":   avatar,
+				"nickname": nickname.String,
+				"avatar": func() string {
+					if avatar.Valid && avatar.String != "" {
+						return avatar.String
+					}
+					return "/static/avatars/default.jpg"
+				}(),
 			},
 		})
 	}
@@ -179,21 +187,111 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	commentID := chi.URLParam(r, "id")
 
-	var body EditCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	// Step 1: Get existing comment
+	var existingImage sql.NullString
+	var authorID string
+	err := db.DB.QueryRow(`
+		SELECT user_id, image FROM comments WHERE id = $1
+	`, commentID).Scan(&authorID, &existingImage)
+	if err != nil {
+		http.Error(w, "Comment not found", http.StatusNotFound)
 		return
 	}
-	safeContent := bluemonday.StrictPolicy().Sanitize(strings.TrimSpace(body.Content))
-	if safeContent == "" {
-		http.Error(w, "Content is required", http.StatusBadRequest)
+	if authorID != userID {
+		http.Error(w, "Not authorized", http.StatusForbidden)
 		return
 	}
 
+	// Step 2: Parse input
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	content := strings.TrimSpace(r.FormValue("content"))
+	policy := bluemonday.StrictPolicy()
+	safeContent := policy.Sanitize(content)
+
+	if safeContent == "" && r.MultipartForm.File["image"] == nil && r.FormValue("image_url") == "" {
+		http.Error(w, "Comment must have content or image", http.StatusBadRequest)
+		return
+	}
+
+	imageURL := r.FormValue("image_url") // "" means remove
+
+	// Step 3: Handle image upload
+	file, handler, err := r.FormFile("image")
+	if err == nil && file != nil {
+		defer file.Close()
+
+		// validate image
+		buffer := make([]byte, 512)
+		if _, err := file.Read(buffer); err != nil || !strings.HasPrefix(http.DetectContentType(buffer), "image/") {
+			http.Error(w, "Invalid image type", http.StatusBadRequest)
+			return
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, "Failed to reset image reader", http.StatusInternalServerError)
+			return
+		}
+
+		ext := strings.ToLower(filepath.Ext(handler.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+			http.Error(w, "Unsupported image format", http.StatusBadRequest)
+			return
+		}
+
+		if err := os.MkdirAll("uploads/comments", os.ModePerm); err != nil {
+			http.Error(w, "Failed to create directory", http.StatusInternalServerError)
+			return
+		}
+
+		filename := "comment_" + uuid.New().String() + ext
+		savePath := filepath.Join("uploads/comments", filename)
+
+		out, err := os.Create(savePath)
+		if err != nil {
+			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			return
+		}
+		defer out.Close()
+		if _, err := io.Copy(out, file); err != nil {
+			http.Error(w, "Failed to write image", http.StatusInternalServerError)
+			return
+		}
+
+		imageURL = "/static/comments/" + filename
+	}
+
+	// Step 4: If the image is being removed or replaced, delete old one
+	shouldDeleteOld := (imageURL == "" && existingImage.Valid) || (imageURL != "" && imageURL != existingImage.String)
+	if shouldDeleteOld && existingImage.Valid && existingImage.String != "/static/comments/default.jpg" {
+		_ = utils.DeleteImageFromTable(
+			db.DB,
+			"comments",
+			"id",
+			commentID,
+			userID,
+			"image",
+			"/static/comments/",
+			"/uploads/comments/",
+			"default.jpg",
+		)
+	}
+
+	// Step 5: Prepare updated image value
+	var imageCol interface{}
+	if imageURL == "" {
+		imageCol = nil // remove image
+	} else {
+		imageCol = imageURL // update to new one
+	}
+
+	// Step 6: Perform the update
 	res, err := db.DB.Exec(`
-		UPDATE comments SET content = $1
-		WHERE id = $2 AND user_id = $3
-	`, safeContent, commentID, userID)
+		UPDATE comments SET content = $1, image = $2
+		WHERE id = $3 AND user_id = $4
+	`, safeContent, imageCol, commentID, userID)
 	if err != nil {
 		http.Error(w, "Failed to update comment", http.StatusInternalServerError)
 		return
@@ -201,7 +299,7 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
-		http.Error(w, "Not authorized or comment not found", http.StatusForbidden)
+		http.Error(w, "Update failed", http.StatusForbidden)
 		return
 	}
 
@@ -213,6 +311,22 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	commentID := chi.URLParam(r, "id")
+
+	err := utils.DeleteImageFromTable(
+		db.DB,
+		"comments",
+		"id",
+		commentID,
+		userID,
+		"image",
+		"/static/comments/",
+		"/uploads/comments/",
+		"default.jpg",
+	)
+	if err != nil {
+		http.Error(w, "Failed to delete comment image", http.StatusInternalServerError)
+		return
+	}
 
 	res, err := db.DB.Exec(`
 		DELETE FROM comments WHERE id = $1 AND user_id = $2

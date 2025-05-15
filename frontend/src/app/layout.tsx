@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/navbar/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
 import { ChatManagerProvider } from "@/components/chat/ChatManager";
 import FloatingChatContainer from "@/components/chat/FloatingChatContainer";
-// import { PresenceProvider } from "@/context/PresenceContext";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +39,7 @@ export default function RootLayout({
               {children}
               <FloatingChatContainer />
             </ChatManagerProvider>
+            <Footer />
           {/* </PresenceProvider> */}
         </AuthProvider>
       </body>
