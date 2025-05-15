@@ -28,6 +28,7 @@ func main() {
 	// Authenticated
 	r.With(middleware.RequireAuth).Get("/api/me", handlers.Me)
 	r.With(middleware.RequireAuth).Delete("/api/me", handlers.DeleteMyProfile)
+	r.With(middleware.RequireAuth).Get("/api/me/data", handlers.GetMyPersonalData)
 	r.With(middleware.RequireAuth).Get("/api/hello", HelloUser)
 
 	// Profile access

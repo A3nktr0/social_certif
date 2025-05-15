@@ -12,10 +12,10 @@ export default function Footer() {
         CGU
       </Link>
       <Link
-        href="/mentions-legales"
+        href="/privacy-policy"
         className="hover:text-blue-600 text-gray-800 ml-6"
       >
-        Mentions Légales
+        Politique de confidentialité
       </Link>
     </footer>
   );

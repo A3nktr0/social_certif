@@ -187,7 +187,14 @@ export default function ProfilePage() {
               >
                 Edit Profile
               </Link>
-
+              <Link
+                href="/api/me/data"
+                download={"PersonalData.json"}
+                className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-white text-sm py-2 rounded"
+                target="_blank"
+            >
+                Request my personal data
+            </Link>
               <button
                 onClick={() => setShowDeleteModal(true)}
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded"
