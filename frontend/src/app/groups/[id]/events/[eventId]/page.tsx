@@ -25,12 +25,6 @@ export default function EventDetailPage() {
 
   const [accessDenied, setAccessDenied] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
   const fetchEvent = async () => {
     try {
       const res = await api.get(`/groups/${groupId}/events/${eventId}`);

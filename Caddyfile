@@ -1,4 +1,20 @@
 localhost:8080 {
+
+    
+  #Rediriger HTTP vers HTTPS
+  @http {
+    protocol http
+  }
+  redir @http https://{localhost}:8080
+
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+    X-XSS-Protection "1; mode=block"
+    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+  }
+
     reverse_proxy /api/ws backend:8000
     reverse_proxy /api/* backend:8000
     reverse_proxy /* frontend:3000

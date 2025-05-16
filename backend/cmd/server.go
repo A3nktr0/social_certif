@@ -19,6 +19,9 @@ func main() {
 
 	r := chi.NewRouter()
 
+	r.Use(middleware.CORSMiddleware)            // CORS
+	r.Use(middleware.SecurityHeadersMiddleware) // Sécurité
+
 	// Public
 	r.Get("/api/health", handlers.Health)
 	r.Post("/api/register", middleware.RateLimit(handlers.Register))

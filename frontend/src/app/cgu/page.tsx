@@ -3,61 +3,57 @@
 export default function TermsAndConditions() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-
       <div className="max-w-2xl mx-auto px-6 py-12 text-gray-900 bg-white shadow-lg rounded-lg my-2">
         <h1 className="text-4xl font-extrabold text-center mb-10 text-gray-800">
-          Conditions Générales d'Utilisation
+          Terms and Conditions of Use
         </h1>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">1. Objet</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">1. Purpose</h2>
           <p className="text-base leading-7 text-gray-600">
-            Les présentes CGU régissent l'utilisation du réseau social proposé par notre plateforme.
-            En accédant ou en utilisant les services, vous acceptez sans réserve ces conditions.
+            These Terms and Conditions govern the use of the social network provided by our platform.
+            By accessing or using the services, you unconditionally accept these terms.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">2. Compte utilisateur</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">2. User Account</h2>
           <p className="text-base leading-7 text-gray-600">
-            Vous devez créer un compte pour utiliser certaines fonctionnalités (posts, messages, groupes...).
-            Vous êtes responsable de la confidentialité de vos identifiants.
+            You must create an account to use certain features (posts, messages, groups, etc.).
+            You are responsible for keeping your login credentials confidential.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">3. Contenus partagés</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">3. Shared Content</h2>
           <p className="text-base leading-7 text-gray-600">
-            Vous êtes seul responsable des contenus que vous publiez. Les images, textes, et autres médias
-            doivent respecter la loi et les bonnes mœurs. Les administrateurs peuvent supprimer tout contenu
-            non conforme.
+            You are solely responsible for the content you publish. Images, texts, and other media
+            must comply with the law and good conduct. Administrators may remove any non-compliant content.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">4. Données personnelles</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">4. Personal Data</h2>
           <p className="text-base leading-7 text-gray-600">
-            Vous disposez à tout moment d’un droit d’accès, de rectification, de suppression et de portabilité
-            de vos données. Voir notre{" "}
+            You have the right to access, rectify, delete, and transfer your data at any time. See our{" "}
             <a href="/privacy-policy" className="text-blue-500 hover:underline">
-              politique de confidentialité
+              privacy policy
             </a>.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">5. Responsabilités</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">5. Responsibilities</h2>
           <p className="text-base leading-7 text-gray-600">
-            Nous déclinons toute responsabilité en cas de perte de données ou de dysfonctionnements, sauf cas
-            de faute lourde.
+            We disclaim all liability in case of data loss or malfunctions, except in cases of gross negligence.
           </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">6. Modification des CGU</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">6. Modification of Terms</h2>
           <p className="text-base leading-7 text-gray-600">
-            Nous nous réservons le droit de modifier les CGU. En cas de mise à jour, vous serez informé(e)
-            et devrez les accepter à nouveau pour continuer à utiliser nos services.
+            We reserve the right to modify these Terms and Conditions. In case of an update, you will be informed
+            and must accept them again to continue using our services.
           </p>
         </section>
       </div>

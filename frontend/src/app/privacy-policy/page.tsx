@@ -5,48 +5,44 @@ export default function PrivacyPolicy() {
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-3xl mx-auto px-6 py-12 bg-white shadow-lg rounded-xl text-gray-900 my-2">
         <h1 className="text-4xl font-extrabold text-center mb-10 text-gray-800">
-          Politique de Confidentialité
+          Privacy Policy
         </h1>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">1. Collecte des données</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">1. Data Collection</h2>
           <p className="text-base leading-7 text-gray-600">
-            Nous collectons des données lorsque vous créez un compte, publiez du contenu, interagissez avec
-            d’autres utilisateurs ou utilisez nos services.
+            We collect data when you create an account, post content, interact with other users, or use our services.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">2. Données collectées</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">2. Data Collected</h2>
           <ul className="list-disc pl-6 space-y-2 text-base leading-7 text-gray-600">
-            <li>Nom, pseudo, adresse e-mail</li>
-            <li>Contenus publiés (posts, images, commentaires, messages)</li>
-            <li>Interactions (likes, follow, etc.)</li>
-            <li>Adresse IP et logs de connexion</li>
+            <li>Name, username, email address</li>
+            <li>Published content (posts, images, comments, messages)</li>
+            <li>Interactions (likes, follows, etc.)</li>
+            <li>IP address and connection logs</li>
           </ul>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">3. Utilisation des données</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">3. Use of Data</h2>
           <p className="text-base leading-7 text-gray-600">
-            Vos données servent à faire fonctionner le service, personnaliser votre expérience, assurer la sécurité
-            et respecter nos obligations légales.
+            Your data is used to operate the service, personalize your experience, ensure security, and comply with our legal obligations.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">4. Vos droits</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">4. Your Rights</h2>
           <p className="text-base leading-7 text-gray-600">
-            Conformément au RGPD, vous pouvez demander l&apos;accès, la modification, la suppression ou la portabilité
-            de vos données. Pour cela, faites-le via votre profil.
+            In accordance with the GDPR, you can request access, modification, deletion, or portability of your data. To do so, please use your profile.
           </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">5. Conservation</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-700">5. Data Retention</h2>
           <p className="text-base leading-7 text-gray-600">
-            Vos données sont conservées tant que votre compte est actif, ou selon les durées légales applicables.
-            Vous pouvez supprimer votre compte à tout moment.
+            Your data is retained as long as your account is active, or according to applicable legal periods. You can delete your account at any time.
           </p>
         </section>
       </div>

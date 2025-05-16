@@ -11,7 +11,11 @@ var mu sync.Mutex
 
 func RateLimit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
+		// ip := r.RemoteAddr
+		ip := r.Header.Get("X-Forwarded-For")
+		if ip == "" {
+			ip = r.RemoteAddr
+		}
 
 		mu.Lock()
 		defer mu.Unlock()

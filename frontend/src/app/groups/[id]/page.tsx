@@ -18,7 +18,7 @@ type TabOption = "posts" | "events" | "members";
 export default function GroupDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -29,10 +29,6 @@ export default function GroupDetailPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [joinRequested, setJoinRequested] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading]);
 
   const fetchGroup = async () => {
     try {

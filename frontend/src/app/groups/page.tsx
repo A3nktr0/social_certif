@@ -3,19 +3,13 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Group } from "@/types/group";
 
 export default function GroupsPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
 
   useEffect(() => {
     const fetchGroups = async () => {

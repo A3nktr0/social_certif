@@ -21,12 +21,6 @@ export default function EditProfilePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
     if (user) {
       setForm({
         first_name: user.first_name,

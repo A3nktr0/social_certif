@@ -5,20 +5,10 @@ import Link from "next/link";
 import api from "@/lib/services/axios";
 import { Post } from "@/types/post";
 import PostCard from "@/components/posts/PostCard";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchFeed = async () => {

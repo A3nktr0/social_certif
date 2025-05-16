@@ -1,24 +1,24 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Protected routes
-const protectedPaths = ['/dashboard', '/profile', '/groups']
+// Routes that should NOT redirect (publicly accessible)
+const publicPaths = ["/login", "/register", "/cgu", "/privacy-policy"];
 
 export function middleware(req: NextRequest) {
-  const isProtected = protectedPaths.some((path) =>
-    req.nextUrl.pathname.startsWith(path)
-  )
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get("token")?.value;
 
-  const token = req.cookies.get('token')?.value
+  const isPublic = publicPaths.some((path) => pathname.startsWith(path));
+  const isAuth = Boolean(token);
 
-  if (isProtected && !token) {
-    return NextResponse.redirect(new URL('/login', req.url))
+  // Redirect if not authenticated and not on a public path
+  if (!isAuth && !isPublic) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
-// ✅ Define matcher here instead of next.config.ts
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/groups/:path*'],
-}
+  matcher: ["/((?!_next|api|static|favicon.ico).*)"], // match all routes except special Next.js/internal ones
+};

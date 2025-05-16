@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import VisibilitySelector from "@/components/posts/VisibilitySelector";
 import SelectedFollowers from "@/components/posts/SelectedFollowers";
 import DOMPurify from "dompurify";
@@ -16,7 +15,6 @@ interface Follower {
 
 export default function CreatePostPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
 
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -26,10 +24,6 @@ export default function CreatePostPage() {
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [targetUsers, setTargetUsers] = useState<string[]>([]);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (visibility === "selected") {

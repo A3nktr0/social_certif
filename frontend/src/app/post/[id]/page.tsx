@@ -7,22 +7,11 @@ import { Post } from "@/types/post";
 import PostCard from "@/components/posts/PostCard";
 import CommentForm from "@/components/comments/CommentForm";
 import CommentList from "@/components/comments/CommentList";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 
 export default function PostDetailPage() {
   const { id } = useParams();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
-    const { user, loading } = useAuth();
-    const router = useRouter();
-  
-    useEffect(() => {
-      if (!loading && !user) {
-        router.replace("/login");
-      }
-    }, [user, loading, router]);
-  
 
   useEffect(() => {
     if (!id) return;

@@ -168,9 +168,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
-		Secure:   false, // Uncomment this in production
-		// to ensure the cookie is only sent over HTTPS
-		// Secure:   true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
 	})
@@ -186,7 +184,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(-1 * time.Hour), // Invalidate immediately
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   false, // Set to true behind HTTPS
+		Secure:   true, // Set to true behind HTTPS
 		SameSite: http.SameSiteStrictMode,
 	})
 

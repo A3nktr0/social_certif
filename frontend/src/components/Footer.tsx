@@ -9,13 +9,13 @@ export default function Footer() {
         href="/cgu"
         className="hover:text-blue-600 text-gray-800"
       >
-        CGU
+        Terms of Use
       </Link>
       <Link
         href="/privacy-policy"
         className="hover:text-blue-600 text-gray-800 ml-6"
       >
-        Politique de confidentialité
+        Privacy Policy
       </Link>
     </footer>
   );

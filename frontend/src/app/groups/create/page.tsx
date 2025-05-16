@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
 
 export default function CreateGroupPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -16,9 +14,6 @@ export default function CreateGroupPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

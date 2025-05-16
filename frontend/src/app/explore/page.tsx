@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 
 type User = {
   id: string;
@@ -17,14 +15,6 @@ type User = {
 export default function ExplorePage() {
   const [people, setPeople] = useState<User[]>([]);
   const [error, setError] = useState("");
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchExplore = async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/services/axios";
 import Link from "next/link";
@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const id = typeof rawId === "string" ? rawId.trim() : "";
   const safeId = encodeURIComponent(id);
 
-  const { user, setUser, loading } = useAuth();
+  const { user, setUser } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
@@ -31,13 +31,6 @@ export default function ProfilePage() {
   const [followStatus, setFollowStatus] = useState<"none" | "pending" | "accepted">("none");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isOwnProfile = user?.id === id;
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
 
   const fetchStats = async () => {
     if (!isOwnProfile) return;
