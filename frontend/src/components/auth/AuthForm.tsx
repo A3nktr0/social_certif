@@ -68,7 +68,7 @@ export default function AuthForm({ title, fields, onSubmit }: Props) {
 
     try {
       await onSubmit(sanitizedForm);
-    } catch (err) {
+    } catch {
       // Always show generic login error
       setErrorMessages(["Invalid email or password."]);
     }

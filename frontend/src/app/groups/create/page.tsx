@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
+import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
 export default function CreateGroupPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [avatar, setAvatar] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
+  
+  // Check authentication
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,8 +56,9 @@ export default function CreateGroupPage() {
       });
 
       router.push("/groups");
-    } catch (err: any) {
-      setError(err?.response?.data || "Failed to create group.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to create group.");
     } finally {
       setSubmitting(false);
     }
@@ -100,11 +111,16 @@ export default function CreateGroupPage() {
                   <p className="text-sm text-gray-600 truncate">
                     Selected: <span className="font-medium">{avatar.name}</span>
                   </p>
-                  <img
-                    src={URL.createObjectURL(avatar)}
-                    alt="preview"
-                    className="max-h-64 rounded-lg border object-contain mx-auto"
-                  />
+                  <div className="relative h-64 w-full max-w-md mx-auto">
+                    <Image
+                      src={URL.createObjectURL(avatar)}
+                      alt="Image preview"
+                      fill
+                      className="rounded-lg border object-contain"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      unoptimized={true}
+                    />
+                  </div>
                 </div>
               )}
             </div>

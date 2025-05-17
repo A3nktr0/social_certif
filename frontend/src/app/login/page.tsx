@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   useGuestRedirect();
 
-  const waitForAuth = async (tries = 5): Promise<any> => {
+  const waitForAuth = async (tries = 5) => {
     for (let i = 0; i < tries; i++) {
       try {
         const res = await api.get("/me");

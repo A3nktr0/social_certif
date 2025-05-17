@@ -19,12 +19,13 @@ export default function FollowersPanel({ refreshStats }: Props) {
         const res = await api.get("/follow/followers");
         setFollowers(res.data);
         refreshStats();
-      } catch (err: any) {
-        setError(err?.response?.data || "Failed to load data");
+      } catch (err: unknown) {
+        const errorObj = err as { response?: { data?: string } };
+        setError(errorObj?.response?.data || "Failed to load data");
       }
     };
     fetchData();
-  }, []);
+  }, [refreshStats]);
 
   const handleFollowBack = async (id: string) => {
     try {
@@ -33,8 +34,9 @@ export default function FollowersPanel({ refreshStats }: Props) {
       setFollowers((prev) =>
         prev?.map((u) => (u.id === id ? { ...u, is_following: true } : u)) || []
       );
-    } catch {
-      alert("Failed to follow back.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to follow back.");
     }
   };
 

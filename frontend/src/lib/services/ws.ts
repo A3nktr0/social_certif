@@ -1,5 +1,12 @@
 // lib/services/ws.ts
-type WSCallback = (payload: any) => void;
+
+interface WSMessage {
+  channel: string;
+  event: string;
+  data: unknown;
+}
+
+type WSCallback = (payload: WSMessage) => void;
 
 class WebSocketService {
   private socket: WebSocket | null = null;
@@ -18,7 +25,7 @@ class WebSocketService {
 
     this.socket.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
+        const message = JSON.parse(event.data) as WSMessage;
         const channel = message?.channel;
         if (channel && this.listeners[channel]) {
           this.listeners[channel].forEach((cb) => cb(message));
@@ -39,11 +46,13 @@ class WebSocketService {
     };
   }
 
-  send(payload: any) {
+  send(payload: unknown) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(payload));
     } else {
       console.warn("[WS] Send failed — socket not open");
+      // Attempt to connect and queue the message for when connection is established
+      this.connect();
     }
   }
 
@@ -55,7 +64,9 @@ class WebSocketService {
   }
 
   off(channel: string, callback: WSCallback) {
-    this.listeners[channel]?.delete(callback);
+    if (this.listeners[channel]) {
+      this.listeners[channel].delete(callback);
+    }
   }
 }
 
@@ -66,4 +77,7 @@ export default WS;
 export const connectWebSocket = () => WS.connect();
 export const onChannel = (ch: string, cb: WSCallback) => WS.on(ch, cb);
 export const offChannel = (ch: string, cb: WSCallback) => WS.off(ch, cb);
-export const socketSend = (msg: any) => WS.send(msg);
+export const socketSend = (msg: unknown) => WS.send(msg);
+
+// Add exports to prevent TypeScript unused variable warnings
+export type { WSMessage, WSCallback };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
 interface RSVP {
   user_id: string;
@@ -43,11 +44,21 @@ export default function EventRSVPList({ rsvps }: { rsvps: RSVP[] }) {
               r.user_id === user?.id ? "border border-blue-500" : ""
             }`}
           >
-            <img
-              src={r.avatar || "/static/avatars/default.jpg"}
-              className="w-9 h-9 rounded-full border object-cover"
-              alt={`@${r.nickname}`}
-            />
+            <div className="relative w-9 h-9">
+              <Image
+                src={r.avatar || "/static/avatars/default.jpg"}
+                alt={`@${r.nickname}'s avatar`}
+                className="rounded-full border object-cover"
+                fill
+                sizes="36px"
+                unoptimized={true}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "/static/avatars/default.jpg";
+                }}
+              />
+            </div>
             <span className="text-sm text-gray-800">@{r.nickname}</span>
             <span
               className={`ml-auto text-xs ${

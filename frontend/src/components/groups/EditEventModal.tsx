@@ -62,7 +62,7 @@ export default function EditEventModal({
 
       onUpdate();
       onClose();
-    } catch (err) {
+    } catch {
         setError("Failed to update event.");
     } finally {
         setLoading(false);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import Image from "next/image";
 import { Group } from "@/types/group";
 
 export default function DiscoverGroupsPage() {
@@ -16,8 +17,9 @@ export default function DiscoverGroupsPage() {
       try {
         const res = await api.get("/groups/discover");
         setGroups(Array.isArray(res.data) ? res.data : []);
-      } catch (err: any) {
-        setError(err?.response?.data || "Failed to load groups.");
+      } catch (err: unknown) {
+        const errorObj = err as { response?: { data?: string } };
+        setError(errorObj?.response?.data || "Failed to load groups.");
       }
     };
     if (user) fetchDiscoverableGroups();
@@ -27,8 +29,9 @@ export default function DiscoverGroupsPage() {
     try {
       await api.post(`/groups/${groupId}/join`);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
-    } catch (err: any) {
-      alert(err?.response?.data || "Failed to request to join group.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to request to join group.");
     }
   };
 
@@ -49,11 +52,23 @@ export default function DiscoverGroupsPage() {
                 className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm hover:shadow-md transition"
               >
                 <Link href={`/groups/${group.id}`} className="flex items-center gap-4">
-                  <img
-                    src={group.avatar || "/static/avatars/default.jpg"}
-                    alt="group avatar"
-                    className="w-12 h-12 rounded-full object-cover border hover:scale-105 transition-transform"
-                  />
+                  <div className="relative w-12 h-12">
+                    <Image
+                      src={group.avatar || "/static/avatars/default.jpg"}
+                      alt="Group avatar"
+                      className="rounded-full object-cover border hover:scale-105 transition-transform"
+                      fill
+                      sizes="48px"
+                      priority
+                      unoptimized={true}
+                      onError={(e) => {
+                        // Fallback to default image if there's an error loading the group avatar
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = "/static/avatars/default.jpg";
+                      }}
+                    />
+                  </div>
                   <div>
                     <p className="text-gray-800 font-medium">{group.name}</p>
                     <p className="text-sm text-gray-500 line-clamp-2">{group.description}</p>

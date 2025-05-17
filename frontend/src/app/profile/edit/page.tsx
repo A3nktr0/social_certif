@@ -21,6 +21,12 @@ export default function EditProfilePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Redirect to login if not authenticated
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+    
+    // Populate form fields when user data is available
     if (user) {
       setForm({
         first_name: user.first_name,
@@ -31,7 +37,7 @@ export default function EditProfilePage() {
         dob: user.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
       });
     }
-  }, [user]);
+  }, [user, loading, router]);
 
   if (loading) {
     return <p className="p-6 text-center text-gray-500">Loading...</p>;
@@ -59,8 +65,9 @@ export default function EditProfilePage() {
       const res = await api.get("/me");
       setUser(res.data);
       router.push(`/profile/${res.data.id}`);
-    } catch (err: any) {
-      setError(err?.response?.data || "Update failed");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Update failed");
     }
   };
 

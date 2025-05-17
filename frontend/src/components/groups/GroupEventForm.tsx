@@ -59,8 +59,8 @@ export default function GroupEventForm({ groupId, onEventCreated }: Props) {
       setDescription("");
       setEventTime("");
       onEventCreated();
-    } catch (err: any) {
-      setError(err?.response?.data || "Failed to create event.");
+    } catch {
+      console.log("Failed to create event.");
     } finally {
       setLoading(false);
     }

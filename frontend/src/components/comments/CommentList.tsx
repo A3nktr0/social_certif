@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Comment } from "@/types/comment";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
 import { useAuth } from "@/context/AuthContext";
 import ConfirmModal from "@/components/common/ConfirmModal";
+import Image from "next/image";
 
 export default function CommentList({ postId }: { postId: string }) {
   const { user } = useAuth();
@@ -19,16 +20,19 @@ export default function CommentList({ postId }: { postId: string }) {
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const fetchComments = () => {
+  const fetchComments = useCallback(() => {
     api
       .get(`/posts/${postId}/comments`)
       .then((res) => setComments(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setError("Failed to load comments."));
-  };
+      .catch((err: unknown) => {
+        const errorObj = err as { response?: { data?: string } };
+        setError(errorObj?.response?.data || "Failed to load comments.");
+      });
+  }, [postId]);
 
   useEffect(() => {
     fetchComments();
-  }, [postId]);
+  }, [fetchComments]);
 
   const handleUpdate = async (commentId: string) => {
     const formData = new FormData();
@@ -47,8 +51,9 @@ export default function CommentList({ postId }: { postId: string }) {
       setEditedImageFile(null);
       setEditedImageUrl("");
       fetchComments();
-    } catch {
-      alert("Failed to update comment.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to update comment.");
     }
   };
 
@@ -58,8 +63,9 @@ export default function CommentList({ postId }: { postId: string }) {
       await api.delete(`/comments/${deleteTargetId}`);
       setDeleteTargetId(null);
       fetchComments();
-    } catch {
-      alert("Failed to delete comment.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to delete comment.");
     }
   };
 
@@ -74,11 +80,21 @@ export default function CommentList({ postId }: { postId: string }) {
       ) : (
         comments.map((c) => (
           <div key={c.id} className="flex items-start gap-3 relative">
-            <img
-              src={c.user.avatar}
-              alt="avatar"
-              className="w-9 h-9 rounded-full object-cover border"
-            />
+            <div className="relative w-9 h-9">
+              <Image
+                src={c.user.avatar || "/static/avatars/default.jpg"}
+                alt={`${c.user.nickname || "User"}'s avatar`}
+                className="rounded-full object-cover border"
+                fill
+                sizes="36px"
+                unoptimized={true}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "/static/avatars/default.jpg";
+                }}
+              />
+            </div>
             <div className="bg-gray-100 px-4 py-2 rounded-xl max-w-full w-full">
               <div className="flex justify-between items-center">
                 <p className="text-sm font-medium text-gray-900">
@@ -119,11 +135,21 @@ export default function CommentList({ postId }: { postId: string }) {
 
                   {editedImageUrl && !editedImageFile && (
                     <div className="relative mt-2">
-                      <img
-                        src={editedImageUrl}
-                        alt="comment image"
-                        className="rounded border max-h-48 object-contain"
-                      />
+                      <div className="relative h-48 w-full max-w-md">
+                        <Image
+                          src={editedImageUrl}
+                          alt="Comment image"
+                          className="rounded border object-contain"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 400px"
+                          unoptimized={true}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            // Don't set a fallback as we want to know if there's an issue
+                          }}
+                        />
+                      </div>
                       <button
                         onClick={() => setEditedImageUrl("")}
                         className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded"
@@ -149,7 +175,7 @@ export default function CommentList({ postId }: { postId: string }) {
                         setEditedImageUrl("");
                       }
                     }}
-                    className="block text-xs mt-2 text-gray-900 border border-gray-300 rounded-lg text-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="block mt-2 text-gray-900 border border-gray-300 rounded-lg text-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
 
                   <div className="flex justify-end gap-2 mt-2 text-sm">
@@ -180,11 +206,21 @@ export default function CommentList({ postId }: { postId: string }) {
                     }}
                   />
                   {c.image && (
-                    <img
-                      src={c.image}
-                      alt="comment image"
-                      className="mt-2 rounded-md border max-h-64 object-contain"
-                    />
+                    <div className="relative mt-2 h-64 w-full max-w-md">
+                      <Image
+                        src={c.image}
+                        alt="Comment image"
+                        className="rounded-md border object-contain"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 400px"
+                        unoptimized={true}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = "/static/comments/default.jpg";
+                        }}
+                      />
+                    </div>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(c.created_at).toLocaleString('fr')}

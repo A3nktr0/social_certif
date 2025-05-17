@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type User = {
   id: string;
@@ -15,14 +18,27 @@ type User = {
 export default function ExplorePage() {
   const [people, setPeople] = useState<User[]>([]);
   const [error, setError] = useState("");
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const fetchExplore = async () => {
       try {
         const res = await api.get("/explore");
         setPeople(Array.isArray(res.data) ? res.data : []);
-      } catch (err: any) {
-        setError(err?.response?.data || "Failed to load users.");
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'response' in err && 
+            err.response && typeof err.response === 'object' && 'data' in err.response) {
+          setError(String(err.response.data));
+        } else {
+          setError("Failed to load users.");
+        }
       }
     };
     fetchExplore();
@@ -59,11 +75,23 @@ export default function ExplorePage() {
                     href={`/profile/${person.id}`}
                     className="flex items-center gap-4"
                   >
-                    <img
-                      src={person.avatar}
-                      alt="avatar"
-                      className="w-12 h-12 rounded-full object-cover border hover:scale-105 transition-transform"
-                    />
+                    <div className="relative w-12 h-12">
+                      <Image
+                        src={person.avatar || "/static/avatars/default.jpg"}
+                        alt={`${person.first_name}'s avatar`}
+                        className="rounded-full object-cover border hover:scale-105 transition-transform"
+                        fill
+                        sizes="48px"
+                        priority
+                        unoptimized={true}
+                        onError={(e) => {
+                          // Fallback to default image if there's an error loading the user avatar
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = "/static/avatars/default.jpg";
+                        }}
+                      />
+                    </div>
                     <div>
                       <p className="text-gray-800 font-medium">
                         {person.first_name} {person.last_name}

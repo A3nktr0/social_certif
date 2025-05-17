@@ -4,6 +4,7 @@ import { useState } from "react";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
 import { Image as ImageIcon, X } from "lucide-react";
+import Image from "next/image";
 
 export default function CommentForm({
   postId,
@@ -37,8 +38,9 @@ export default function CommentForm({
       setImage(null);
       setError("");
       onCommentAdded?.();
-    } catch {
-      setError("Failed to submit comment.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to submit comment.");
     }
   };
 
@@ -82,11 +84,16 @@ export default function CommentForm({
       {/* Image preview */}
       {image && (
         <div className="relative w-fit">
-          <img
-            src={URL.createObjectURL(image)}
-            alt="preview"
-            className="mt-2 max-h-40 rounded-md border object-contain"
-          />
+          <div className="relative mt-2 h-40 w-60">
+            <Image
+              src={URL.createObjectURL(image)}
+              alt="Comment image preview"
+              className="rounded-md border object-contain"
+              fill
+              sizes="(max-width: 768px) 100vw, 240px"
+              unoptimized={true}
+            />
+          </div>
           <button
             type="button"
             onClick={() => setImage(null)}

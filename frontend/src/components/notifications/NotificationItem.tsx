@@ -19,7 +19,7 @@ interface Props {
   content: string;
   nickname: string;
   createdAt: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   onRemove: (id: string) => void;
   onCountUpdate: () => void;
 }
@@ -51,7 +51,7 @@ export default function NotificationItem({
         onRemove(id);
         onCountUpdate();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Notification dismiss failed:", err);
     } finally {
       setProcessing(false);
@@ -61,8 +61,8 @@ export default function NotificationItem({
   const isGroupAction = (t: string) =>
     t === "group_invite" || t === "group_join_request";
 
-  const extractGroupId = () => data?.group_id ?? "";
-  const extractRequestedUserId = () => data?.user_id ?? "";
+  const extractGroupId = () => data?.group_id as string ?? "";
+  const extractRequestedUserId = () => data?.user_id as string ?? "";
 
   const handleAccept = async () => {
     if (isProcessing) return;
@@ -82,7 +82,7 @@ export default function NotificationItem({
 
       onRemove(id);
       onCountUpdate();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Accept failed:", err);
     } finally {
       setProcessing(false);
@@ -107,7 +107,7 @@ export default function NotificationItem({
 
       onRemove(id);
       onCountUpdate();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Reject failed:", err);
     } finally {
       setProcessing(false);

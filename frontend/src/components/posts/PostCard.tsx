@@ -8,6 +8,7 @@ import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
 import EditPostModal from "@/components/posts/EditPostModal";
 import ConfirmModal from "../common/ConfirmModal";
+import Image from "next/image";
 
 export default function PostCard({ post }: { post: Post }) {
   const { user } = useAuth();
@@ -27,8 +28,9 @@ export default function PostCard({ post }: { post: Post }) {
       await api.post(url);
       setLikeCount((prev) => prev + (liked ? -1 : 1));
       setLiked(!liked);
-    } catch {
-      alert("Failed to update like.");
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      alert(errorObj?.message || "Failed to update like.");
     } finally {
       setLoading(false);
     }
@@ -38,11 +40,19 @@ export default function PostCard({ post }: { post: Post }) {
     <div className="border rounded-xl bg-white shadow-sm space-y-3 p-4 relative">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href={`/profile/${post.author.id}`}>
-          <img
-            src={post.author.avatar}
+        <Link href={`/profile/${post.author.id}`} className="relative w-10 h-10">
+          <Image
+            src={post.author.avatar || "/static/avatars/default.jpg"}
             alt={`${post.author.name}'s avatar`}
-            className="w-10 h-10 rounded-full object-cover border"
+            className="rounded-full object-cover border"
+            fill
+            sizes="40px"
+            unoptimized={true}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "/static/avatars/default.jpg";
+            }}
           />
         </Link>
         <div>
@@ -66,11 +76,21 @@ export default function PostCard({ post }: { post: Post }) {
       )}
 
       {post.image && (
-        <img
-          src={post.image}
-          alt="Post content"
-          className="rounded-md border max-h-[450px] w-full object-contain"
-        />
+        <div className="relative w-full h-[450px]">
+          <Image
+            src={post.image}
+            alt="Post content"
+            className="rounded-md border object-contain"
+            fill
+            sizes="(max-width: 768px) 100vw, 768px"
+            unoptimized={true}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "/static/images/error-placeholder.jpg";
+            }}
+          />
+        </div>
       )}
 
       {/* Meta */}
@@ -146,8 +166,9 @@ export default function PostCard({ post }: { post: Post }) {
             try {
               await api.delete(`/posts/${post.id}`);
               window.location.href = "/feed";
-            } catch {
-              alert("Failed to delete post.");
+            } catch (err: unknown) {
+              const errorObj = err as { message?: string };
+              alert(errorObj?.message || "Failed to delete post.");
             }
           }}
         />

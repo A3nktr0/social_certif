@@ -4,10 +4,10 @@ import { useChat } from "@/hooks/useChat";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Message } from "@/types/message";
-import { offChannel, onChannel } from "@/lib/services/ws";
+import { offChannel, onChannel, WSMessage } from "@/lib/services/ws";
 import MessageComposer from "./MessageComposer";
-import ChatHeader from "@components/chat/ChatHeader";
-import ChatMessages from "@components/chat/ChatMessages";
+import ChatHeader from "@/components/chat/ChatHeader";
+import ChatMessages from "@/components/chat/ChatMessages";
 import axios from "axios";
 
 interface Props {
@@ -23,20 +23,17 @@ export default function ChatWindow({ type, targetId }: Props) {
   const [typingUser, setTypingUser] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [displayName, setDisplayName] = useState("");
+  
+  const scrollToBottom = () => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+  };
 
-//   // Load initial messages
-//   useEffect(() => {
-//     axios
-//       .get(`/api/chat/${type}/${targetId}`, { withCredentials: true })
-//       .then((res) => {
-//         setMessages(res.data || []);
-//         setDisplayName(res.data?.nickname);
-//         scrollToBottom();
-//       })
-//       .catch((err) => console.error("Failed to load messages", err));
-//   }, [type, targetId]);
-
-
+  // Load initial messages
+  useEffect(() => {
     const fetchInitialMessages = async () => {
       try {
         const res = await axios.get(`/api/chat/${type}/${targetId}`, {
@@ -46,24 +43,28 @@ export default function ChatWindow({ type, targetId }: Props) {
         setMessages(data);
         setDisplayName(data?.nickname);
         scrollToBottom();
-      } catch (err) {
-        console.error("Failed to load messages", err);
+      } catch (err: unknown) {
+        const errorObj = err as { message?: string };
+        console.error("Failed to load messages", errorObj.message || err);
       }
     };
-  useEffect(() => {
+    
     fetchInitialMessages();
   }, [type, targetId]);
 
   // WebSocket message handler
   useEffect(() => {
-    const handle = (msg: Message) => {
+    const handle = (msg: WSMessage) => {
       if (msg.channel !== "chat") return;
-
+      
+      // Cast the data to appropriate type
+      const chatData = msg.data as Record<string, unknown>;
+      
       if (msg.event === "typing") {
-        const typingTarget = msg.data?.group_id || msg.sender_id;
-        const isTyping = msg.content === "typing";
+        // Store typing info and set timeout to clear it
+        const isTyping = (chatData.content as string) === "typing";
         setIsTyping(isTyping);
-        setTypingUser(msg.data?.nickname || msg.sender_id);
+        setTypingUser(((chatData.nickname as string) || (chatData.sender_id as string)) || "");
         if (isTyping) {
           setTimeout(() => {
             setIsTyping(false);
@@ -73,16 +74,29 @@ export default function ChatWindow({ type, targetId }: Props) {
         return;
       }
 
-      const senderId = msg.data?.sender_id || msg.sender_id;
-      const normalized: Message = { ...msg, sender_id: senderId };
+      const senderId = (chatData.sender_id as string) || "";
+      
+      // Construct a proper Message object
+      const normalized: Message = {
+        id: (chatData.id as string) || "",
+        sender_id: senderId,
+        recipient_id: chatData.recipient_id as string | undefined,
+        group_id: chatData.group_id as string | undefined,
+        content: (chatData.content as string) || "",
+        is_emoji_only: (chatData.is_emoji_only as boolean) || false,
+        created_at: chatData.created_at as string | undefined,
+        channel: msg.channel,
+        event: msg.event,
+        data: chatData
+      };
 
       const isRelevant =
-        (normalized.event === "private_message" &&
+        (msg.event === "private_message" &&
           type === "private" &&
           (senderId === targetId || senderId === user?.id)) ||
-        (normalized.event === "group_message" &&
+        (msg.event === "group_message" &&
           type === "group" &&
-          normalized.data?.group_id === targetId);
+          (chatData.group_id as string) === targetId);
 
       if (!isRelevant) return;
 
@@ -101,14 +115,6 @@ export default function ChatWindow({ type, targetId }: Props) {
     onChannel("chat", handle);
     return () => offChannel("chat", handle);
   }, [type, targetId, user?.id]);
-
-  const scrollToBottom = () => {
-    requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    });
-  };
 
   return (
     <div className="bg-white w-80 h-[500px] rounded-2xl shadow-lg flex flex-col overflow-hidden border border-gray-200">

@@ -11,7 +11,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import TabsSwitcher from "@/components/profile/TabsSwitcher";
 import PostCard from "@/components/posts/PostCard";
 import DeleteProfileModal from "@/components/profile/DeleteProfileModal";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Profile } from "@/types/profile";
 import { Post } from "@/types/post";
 import Loading from "@/app/loading";
@@ -32,7 +32,8 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isOwnProfile = user?.id === id;
 
-  const fetchStats = async () => {
+
+  const fetchStats = useCallback(async () => {
     if (!isOwnProfile) return;
     try {
       const res = await api.get("/follow/stats");
@@ -40,11 +41,11 @@ export default function ProfilePage() {
     } catch {
       // silent fail
     }
-  };
+  }, [isOwnProfile]);
 
   useEffect(() => {
     fetchStats();
-  }, [isOwnProfile]);
+  }, [isOwnProfile, fetchStats]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -56,8 +57,9 @@ export default function ProfilePage() {
           const followRes = await api.get(`/follow/status/${safeId}`);
           setFollowStatus(followRes.data.status);
         }
-      } catch (err: any) {
-        const msg = err?.response?.data || "Unable to load profile";
+      } catch (err: unknown) {
+        const errorObj = err as { response?: { data?: string } };
+        const msg = errorObj?.response?.data || "Unable to load profile";
         setError(msg);
       }
     };
@@ -82,14 +84,31 @@ export default function ProfilePage() {
     if (!file) return;
     const fd = new FormData();
     fd.append("avatar", file);
+    
     try {
-      await api.post("/upload/avatar", fd);
-      const updated = await api.get("/me");
-      setProfile(updated.data);
-      setUser(updated.data);
-    } catch (err: any) {
-      const msg = err?.response?.data || "Unable to upload avatar";
-      setError(msg);
+      const response = await api.post("/upload/avatar", fd);
+      if (response.status === 200) {
+        const updated = await api.get("/me");
+        setProfile(updated.data);
+        setUser(updated.data);
+      } else {
+        throw new Error(`Server returned ${response.status}`);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string; status?: number }; message?: string };
+      const statusCode = errorObj?.response?.status;
+      let errorMessage = "Unable to upload avatar";
+      
+      if (statusCode === 500) {
+        errorMessage = "Server error occurred. Please try again later.";
+      } else if (errorObj?.response?.data) {
+        errorMessage = errorObj.response.data;
+      } else if (errorObj?.message) {
+        errorMessage = errorObj.message;
+      }
+      
+      setError(errorMessage);
+      console.error("Avatar upload failed:", errorObj);
     }
   };
 
@@ -97,8 +116,9 @@ export default function ProfilePage() {
     try {
       await api.post(`/follow/${safeId}`);
       setFollowStatus(profile?.is_private ? "pending" : "accepted");
-    } catch {
-      alert("Failed to follow user.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to follow user.");
     }
   };
 
@@ -106,8 +126,9 @@ export default function ProfilePage() {
     try {
       await api.post(`/follow/unfollow/${safeId}`);
       setFollowStatus("none");
-    } catch {
-      alert("Failed to unfollow user.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      alert(errorObj?.response?.data || "Failed to unfollow user.");
     }
   };
 

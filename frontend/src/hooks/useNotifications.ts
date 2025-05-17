@@ -16,7 +16,8 @@ export function useNotifications(userId?: string | null) {
         const data = res.data;
         setUnreadCount(data.count || 0);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        console.error("Failed to fetch notification count:", err);
         setUnreadCount(0);
       });
   }, [userId]);
@@ -27,7 +28,7 @@ export function useNotifications(userId?: string | null) {
 
     connectWebSocket();
 
-    const handle = (msg: any) => {
+    const handle = (msg: { channel: string; is_read?: boolean }) => {
       if (msg.channel !== "notifications") return;
 
       // Only increment if message is meant to be unread

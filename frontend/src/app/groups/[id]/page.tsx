@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
 import { Group } from "@/types/group";
@@ -18,7 +18,7 @@ type TabOption = "posts" | "events" | "members";
 export default function GroupDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,31 +30,38 @@ export default function GroupDetailPage() {
   const [joinRequested, setJoinRequested] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const fetchGroup = async () => {
+  const fetchGroup = useCallback(async () => {
     try {
       const res = await api.get(`/groups/${id}`);
       setGroup(Array.isArray(res.data) ? res.data[0] : res.data);
-    } catch (err: any) {
-      setError(err?.response?.data || "Failed to load group.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to load group.");
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    if (user && id) fetchGroup();
-  }, [user, id]);
+    if (!loading) {
+      if (!user) {
+        router.replace('/login');
+      } else if (id) {
+        fetchGroup();
+      }
+    }
+  }, [user, id, fetchGroup, loading, router]);
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       const res = await api.get(`/groups/${id}/posts`);
       setPosts(Array.isArray(res.data) ? res.data : []);
     } catch {
       console.error("Failed to load posts");
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (group?.is_member) fetchPosts();
-  }, [group]);
+  }, [group, fetchPosts]);
 
   const handleRequestJoin = async () => {
     try {
@@ -72,7 +79,8 @@ export default function GroupDetailPage() {
     try {
       await api.delete(`/groups/${id}`);
       router.push("/groups");
-    } catch (err) {
+    } catch (error) {
+      console.error("Delete failed:", error);
       alert("Failed to delete group.");
     }
   };

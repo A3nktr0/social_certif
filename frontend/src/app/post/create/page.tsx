@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import VisibilitySelector from "@/components/posts/VisibilitySelector";
 import SelectedFollowers from "@/components/posts/SelectedFollowers";
 import DOMPurify from "dompurify";
+import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+import { BaseUser } from "@/types/user";
 
 interface Follower {
   id: string;
@@ -15,6 +18,7 @@ interface Follower {
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -26,10 +30,17 @@ export default function CreatePostPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Check authentication
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
     if (visibility === "selected") {
       api.get("/follow/followers")
         .then((res) => {
-          const users = res.data.map((u: any) => ({
+          const users = res.data.map((u: BaseUser) => ({
             id: u.id,
             name: u.nickname || `${u.first_name} ${u.last_name}`,
             avatar: u.avatar || "/static/avatars/default.jpg",
@@ -67,8 +78,9 @@ export default function CreatePostPage() {
       });
 
       router.push("/feed");
-    } catch (err: any) {
-      setError(err?.response?.data || "Failed to create post.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to create post.");
     }
   };
 
@@ -127,11 +139,16 @@ export default function CreatePostPage() {
                   <p className="text-sm text-gray-600 truncate">
                     Selected: <span className="font-medium">{image.name}</span>
                   </p>
-                  <img
-                    src={URL.createObjectURL(image)}
-                    alt="preview"
-                    className="max-h-64 rounded-lg border object-contain mx-auto"
-                  />
+                  <div className="relative h-64 w-full max-w-md mx-auto">
+                    <Image
+                      src={URL.createObjectURL(image)}
+                      alt="Image preview"
+                      fill
+                      className="rounded-lg border object-contain"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      unoptimized={true}
+                    />
+                  </div>
                 </div>
               )}
             </div>

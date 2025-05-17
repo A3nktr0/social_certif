@@ -6,5 +6,5 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
   nickname: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }

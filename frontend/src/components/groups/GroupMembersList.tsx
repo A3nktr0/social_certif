@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/services/axios";
 import MemberCard from "./MemberCard";
 import ConfirmModal from "@/components/common/ConfirmModal";
@@ -23,18 +23,18 @@ export default function GroupMembersList({ groupId, isAdmin }: Props) {
   const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       const res = await api.get(`/groups/${groupId}/members`);
       setMembers(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError("Failed to load group members.");
     }
-  };
+  }, [groupId]);
 
   useEffect(() => {
     fetchMembers();
-  }, [groupId]);
+  }, [fetchMembers]);
 
   const confirmRemove = (userId: string) => {
     setPendingRemovalId(userId);

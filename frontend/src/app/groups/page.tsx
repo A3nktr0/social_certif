@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
+import Image from "next/image";
 import { Group } from "@/types/group";
 
 export default function GroupsPage() {
@@ -16,8 +17,24 @@ export default function GroupsPage() {
       try {
         const res = await api.get("/groups");
         setGroups(Array.isArray(res.data) ? res.data : []);
-      } catch (err: any) {
-        setError(err?.response?.data || "Failed to load groups.");
+      } catch (err: unknown) {
+        if (
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          err.response &&
+          typeof (err as { response: unknown }).response === "object" &&
+          "data" in (err as { response: { data?: unknown } }).response
+        ) {
+          const response = (err as { response: { data?: unknown } }).response;
+          setError(
+            typeof response.data === "string"
+              ? response.data
+              : "Failed to load groups."
+          );
+        } else {
+          setError("Failed to load groups.");
+        }
       }
     };
     if (user) fetchGroups();
@@ -63,10 +80,20 @@ export default function GroupsPage() {
                     href={`/groups/${group.id}`}
                     className="flex items-center gap-4"
                   >
-                    <img
+                    <Image
                       src={group.avatar || "/static/avatars/default.jpg"}
                       alt="group avatar"
+                      width={48}
+                      height={48}
                       className="w-12 h-12 rounded-full object-cover border"
+                      priority
+                      unoptimized={true}
+                      onError={(e) => {
+                        // Fallback to default image if there's an error loading the user avatar
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = "/static/avatars/default.jpg";
+                      }}
                     />
                     <div>
                       <p className="text-lg font-medium text-gray-800">

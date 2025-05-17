@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { offChannel, onChannel } from "@/lib/services/ws";
+import { offChannel, onChannel, WSMessage } from "@/lib/services/ws";
 import axios from "axios";
+import Image from "next/image";
 
 interface Props {
   type: "private" | "group";
@@ -18,26 +19,34 @@ export default function ChatHeader({ type, targetId, onClose }: Props) {
 
   useEffect(() => {
     const fetchMeta = async () => {
-      const endpoint = type === "private"
-        ? `/api/profile/${targetId}`
-        : `/api/groups/${targetId}`;
-      const res = await axios.get(endpoint, {
-        withCredentials: true,
-      });
-      const data = res.data;
-      setName(
-        type === "private" ? data.nickname || data.first_name : data.name,
-      );
-      setAvatar(data.avatar || "/static/avatars/default.jpg");
+      try {
+        const endpoint = type === "private"
+          ? `/api/profile/${targetId}`
+          : `/api/groups/${targetId}`;
+        const res = await axios.get(endpoint, {
+          withCredentials: true,
+        });
+        const data = res.data;
+        setName(
+          type === "private" ? data.nickname || data.first_name : data.name,
+        );
+        setAvatar(data.avatar || "/static/avatars/default.jpg");
+      } catch  {
+        console.error("Failed to fetch chat metadata");
+        // Keep default values on error
+      }
     };
     fetchMeta();
   }, [type, targetId]);
 
   useEffect(() => {
     if (type !== "private") return;
-    const handle = (msg: any) => {
-      if (msg.channel === "presence" && msg.from === targetId) {
-        setOnline(msg.data?.online ?? false);
+    const handle = (msg: WSMessage) => {
+      if (msg.channel === "presence") {
+        const data = msg.data as { user_id: string; online: boolean };
+        if (data.user_id === targetId) {
+          setOnline(data.online ?? false);
+        }
       }
     };
     onChannel("presence", handle);
@@ -47,10 +56,21 @@ export default function ChatHeader({ type, targetId, onClose }: Props) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
       <div className="flex items-center gap-3">
-        <div className="relative">
-          <img
+        <div className="relative w-8 h-8">
+          <Image
             src={avatar}
-            className="w-8 h-8 rounded-full border object-cover"
+            alt={`${name}'s avatar`}
+            className="rounded-full border object-cover"
+            fill
+            sizes="32px"
+            priority
+            unoptimized={true}
+            onError={(e) => {
+              // Fallback to default image if there's an error loading the user avatar
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "/static/avatars/default.jpg";
+            }}
           />
           {type === "private" && online && (
             <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border border-white rounded-full" />

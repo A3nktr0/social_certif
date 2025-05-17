@@ -1,21 +1,10 @@
 import { useEffect, useState } from "react";
-import { connectWebSocket, offChannel, onChannel } from "@/lib/services/ws";
-import axios from "axios";
-
-interface PresenceUpdate {
-  channel: string;
-  event: string;
-  data: {
-    user_id: string;
-    nickname: string;
-    online: boolean;
-  };
-}
+import { connectWebSocket, offChannel, onChannel, WSMessage } from "@/lib/services/ws";
 
 export function usePresence(currentUserId?: string | null) {
   const [onlineStatus, setOnlineStatus] = useState<Record<string, boolean>>({});
   const [triggerUpdate, setTriggerUpdate] = useState(0);
-  const [mutualIds, setMutualIds] = useState<string[]>([]);
+  const [mutualIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -23,10 +12,12 @@ export function usePresence(currentUserId?: string | null) {
     connectWebSocket();
 
     // Step 2: Listen to presence_update
-    const handle = (msg: PresenceUpdate) => {
+    const handle = (msg: WSMessage) => {
       if (msg.channel !== "presence") return;
 
-      const { user_id, nickname, online } = msg.data;
+      // Type-safe handling of the websocket data
+      const data = msg.data as { user_id: string; nickname: string; online: boolean };
+      const { user_id, online } = data;
       if (!user_id) return;
 
       setOnlineStatus((prev) => ({

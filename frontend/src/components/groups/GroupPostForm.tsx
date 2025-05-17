@@ -4,6 +4,7 @@ import { useState } from "react";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
 import { Image as ImageIcon, X } from "lucide-react";
+import Image from "next/image";
 
 interface Props {
   groupId: string;
@@ -59,8 +60,9 @@ export default function GroupPostForm({ groupId, onPostCreated }: Props) {
       setContent("");
       setImage(null);
       onPostCreated();
-    } catch (err: any) {
-      setError(err?.response?.data || "Failed to post.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to post.");
     } finally {
       setIsPosting(false);
     }
@@ -105,11 +107,16 @@ export default function GroupPostForm({ groupId, onPostCreated }: Props) {
 
       {image && (
         <div className="relative w-fit mt-2">
-          <img
-            src={URL.createObjectURL(image)}
-            alt="Preview"
-            className="rounded-md border max-h-64 object-contain"
-          />
+          <div className="relative h-64 w-96">
+            <Image
+              src={URL.createObjectURL(image)}
+              alt="Preview of uploaded image"
+              className="rounded-md border object-contain"
+              fill
+              sizes="(max-width: 768px) 100vw, 384px"
+              unoptimized={true}
+            />
+          </div>
           <button
             type="button"
             onClick={() => setImage(null)}

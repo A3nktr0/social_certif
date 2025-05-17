@@ -1,12 +1,16 @@
-import api from "@lib/services/axios"; // your configured axios instance
+import api from "@/lib/services/axios"; // your configured axios instance
 
-export async function postJSON<T>(url: string, data: any): Promise<T> {
+export async function postJSON<T, D = Record<string, unknown>>(url: string, data: D): Promise<T> {
   try {
     const res = await api.post<T>(url, data);
     return res.data;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorObj = err as { 
+      response?: { data?: string },
+      message?: string 
+    };
     const message =
-      err?.response?.data || err?.message || "Request failed";
+      errorObj?.response?.data || errorObj?.message || "Request failed";
     throw new Error(message);
   }
 }

@@ -5,7 +5,7 @@ localhost:8080 {
   @http {
     protocol http
   }
-  redir @http https://{localhost}:8080
+  redir @http https://{host}{uri}
 
   header {
     X-Content-Type-Options "nosniff"

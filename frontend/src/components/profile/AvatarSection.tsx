@@ -1,6 +1,7 @@
 
 "use client";
 import { useRef } from "react";
+import Image from "next/image";
 
 export default function AvatarSection({
   avatarUrl,
@@ -15,12 +16,34 @@ export default function AvatarSection({
 
   return (
     <div className="relative inline-block">
-      <img
-        src={`${avatarUrl}?t=${Date.now()}`}
-        alt="avatar"
-        className="w-24 h-24 mx-auto rounded-full border object-cover cursor-pointer hover:opacity-80 transition"
-        onClick={() => isOwnProfile && fileRef.current?.click()}
-      />
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative w-24 h-24 mx-auto">
+          <Image
+            src={`${avatarUrl || "/static/avatars/default.jpg"}?t=${Date.now()}`}
+            alt="Profile avatar"
+            className="rounded-full border object-cover"
+            fill
+            sizes="96px"
+            priority
+            unoptimized={true}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "/static/avatars/default.jpg";
+            }}
+          />
+        </div>
+        
+        {isOwnProfile && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded-full transition shadow-sm"
+            type="button"
+          >
+            Update Avatar
+          </button>
+        )}
+      </div>
       {isOwnProfile && (
         <input
           type="file"

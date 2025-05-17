@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Post } from "@/types/post";
 import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
+import Image from "next/image";
 
 export default function EditPostModal({
   post,
@@ -48,8 +49,9 @@ export default function EditPostModal({
       });
 
       onSaved();
-    } catch {
-      setError("Failed to update post.");
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      setError(errorObj?.response?.data || "Failed to update post.");
     } finally {
       setSaving(false);
     }
@@ -73,11 +75,21 @@ export default function EditPostModal({
         {/* Image Preview */}
         {imageUrl && (
           <div className="relative">
-            <img
-              src={imageUrl}
-              alt="Post"
-              className="w-full max-h-60 object-cover rounded-lg"
-            />
+            <div className="relative w-full h-60">
+              <Image
+                src={imageUrl}
+                alt="Post content image"
+                className="rounded-lg object-contain"
+                fill
+                sizes="(max-width: 768px) 100vw, 600px"
+                unoptimized={true}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  setError("Image failed to load");
+                }}
+              />
+            </div>
             <button
               onClick={() => {
                 setImageUrl("");

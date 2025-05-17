@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 interface Follower {
   id: string;
@@ -40,11 +41,21 @@ export default function SelectedFollowers({ followers, selected, onChange }: Pro
                 onChange={(e) => toggle(f.id, e.target.checked)}
                 className="accent-blue-600"
               />
-              <img
-                src={f.avatar}
-                alt={f.name}
-                className="w-8 h-8 rounded-full border object-cover"
-              />
+              <div className="relative w-8 h-8">
+                <Image
+                  src={f.avatar || "/static/avatars/default.jpg"}
+                  alt={`${f.name}'s avatar`}
+                  className="rounded-full border object-cover"
+                  fill
+                  sizes="32px"
+                  unoptimized={true}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = "/static/avatars/default.jpg";
+                  }}
+                />
+              </div>
               <span className="text-sm text-gray-800">{f.name}</span>
             </label>
           ))}

@@ -1,0 +1,39 @@
+# Dépendances Node
+node_modules
+.npm
+.pnpm
+.yarn
+package-lock.json
+yarn.lock
+
+# Fichiers de configuration locaux
+.env
+.env.*.local
+.next
+dist
+out
+coverage
+
+# Dossiers d'IDE / outils
+.vscode
+.idea
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Tests
+__tests__/
+*.test.*
+*.spec.*
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Git
+.git
+.gitignore

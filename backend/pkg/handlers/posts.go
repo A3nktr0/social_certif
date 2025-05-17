@@ -512,16 +512,22 @@ func GetPostsByUser(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p FeedPost
 		var firstName, lastName, nickname, authorID string
-		var avatar sql.NullString
+		var avatar, image sql.NullString
 
 		err := rows.Scan(
-			&p.ID, &p.UserID, &p.Content, &p.Image, &p.Visibility, &p.CreatedAt,
+			&p.ID, &p.UserID, &p.Content, &image, &p.Visibility, &p.CreatedAt,
 			&authorID, &firstName, &lastName, &nickname, &avatar,
 			&p.LikeCount, &p.LikedByUser,
 		)
 		if err != nil {
 			http.Error(w, "Error reading post", http.StatusInternalServerError)
 			return
+		}
+
+		if image.Valid {
+			p.Image = image.String
+		} else {
+			p.Image = ""
 		}
 
 		name := nickname

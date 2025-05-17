@@ -17,9 +17,13 @@ export default function RegisterPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       router.push("/login");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorObj = err as { 
+        response?: { data?: string },
+        message?: string
+      };
       const message =
-        err?.response?.data || err?.message || "Registration failed";
+        errorObj?.response?.data || errorObj?.message || "Registration failed";
       throw new Error(message);
     }
   };

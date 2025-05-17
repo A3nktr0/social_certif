@@ -8,7 +8,7 @@ export interface Message {
     created_at?: string;
     channel: string;
     event: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
   }
   
 export interface ChatOutboundMessage {
@@ -16,6 +16,6 @@ export interface ChatOutboundMessage {
   event: "private_message" | "group_message";
   to: string;
   content: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 

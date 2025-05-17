@@ -24,8 +24,8 @@ export default function DeleteProfileModal({ isOpen, onClose }: DeleteProfileMod
       await api.delete("/me");
       setUser(null);
       router.push("/login");
-    } catch (err) {
-      alert("Failed to delete profile.");
+    } catch {
+      console.log("Failed to delete profile.");
     } finally {
       setDeleting(false);
       onClose();

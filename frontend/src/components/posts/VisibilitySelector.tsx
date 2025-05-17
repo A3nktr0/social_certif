@@ -15,7 +15,7 @@ export default function VisibilitySelector({ visibility, setVisibility }: Props)
       </label>
       <select
         value={visibility}
-        onChange={(e) => setVisibility(e.target.value as any)}
+        onChange={(e) => setVisibility(e.target.value as "public" | "private" | "selected")}
         className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="public">🌍 Public</option>

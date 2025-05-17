@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/services/axios";
 import { Event } from "@/types/event";
@@ -25,26 +25,41 @@ export default function EventDetailPage() {
 
   const [accessDenied, setAccessDenied] = useState(false);
 
-  const fetchEvent = async () => {
+  // Use useCallback to prevent unnecessary re-creation of the function
+  const fetchEvent = useCallback(async () => {
     try {
       const res = await api.get(`/groups/${groupId}/events/${eventId}`);
       setEvent(res.data.event);
       setRsvps(res.data.rsvps || []);
       setAccessDenied(false);
-    } catch (err: any) {
-      if (err?.response?.status === 403 || err?.response?.status === 404) {
+    } catch (err: unknown) {
+      // Type guard for the error object
+      type ErrorWithResponse = {
+        response?: {
+          status?: number;
+          data?: unknown;
+        };
+      };
+      
+      const errorObj = err as ErrorWithResponse;
+      if (errorObj?.response?.status === 403 || errorObj?.response?.status === 404) {
         setAccessDenied(true);
       } else {
         router.replace(`/groups/${groupId}`);
       }
     }
-  };
+  }, [groupId, eventId, router]);
 
   useEffect(() => {
-    if (user && !loading) {
-      fetchEvent();
+    // Check authentication status and fetch data
+    if (!loading) {
+      if (!user) {
+        router.replace('/login');
+      } else {
+        fetchEvent();
+      }
     }
-  }, [groupId, eventId, user, loading]);
+  }, [user, loading, router, fetchEvent]);
 
   const refreshEvent = async () => {
     await fetchEvent();

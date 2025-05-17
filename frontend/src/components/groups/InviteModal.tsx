@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { BaseUser } from "@/types/user";
+import Image from "next/image";
 
 interface Props {
   groupId: string;
@@ -33,7 +34,7 @@ export default function InviteModal({ groupId, onClose }: Props) {
     try {
       await api.post(`/groups/${groupId}/invite/${userId}`);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Invite failed", err);
     } finally {
       setInvitingId(null);
@@ -41,7 +42,7 @@ export default function InviteModal({ groupId, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center">
       <div className="bg-white w-full sm:max-w-md rounded-t-xl sm:rounded-xl overflow-hidden shadow-lg">
         <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200">
           <h2 className="text-base font-semibold text-gray-900">Invite Users</h2>
@@ -64,11 +65,21 @@ export default function InviteModal({ groupId, onClose }: Props) {
               {users.map((user) => (
                 <li key={user.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={user.avatar}
-                      alt="avatar"
-                      className="w-10 h-10 rounded-full object-cover border"
-                    />
+                    <div className="relative w-10 h-10">
+                      <Image
+                        src={user.avatar || "/static/avatars/default.jpg"}
+                        alt={`${user.nickname}'s avatar`}
+                        className="rounded-full object-cover border"
+                        fill
+                        sizes="40px"
+                        unoptimized={true}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = "/static/avatars/default.jpg";
+                        }}
+                      />
+                    </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">@{user.nickname}</p>
                       <p className="text-xs text-gray-500">{user.first_name} {user.last_name}</p>

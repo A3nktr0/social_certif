@@ -15,8 +15,13 @@ export default function FeedPage() {
       try {
         const res = await api.get("/posts/feed");
         setPosts(Array.isArray(res.data) ? res.data : []);
-      } catch (err: any) {
-        setError(err?.response?.data || "Failed to load feed.");
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'response' in err && 
+            err.response && typeof err.response === 'object' && 'data' in err.response) {
+          setError(String(err.response.data));
+        } else {
+          setError("Failed to load users.");
+        }
       }
     };
     fetchFeed();

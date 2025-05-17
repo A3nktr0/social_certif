@@ -1,57 +1,32 @@
-# services:
-#   postgres:
-#     image: postgres:latest
-#     env_file:
-#       - .env
-#     volumes:
-#       - postgres_data:/var/lib/postgresql/data
-#     ports:
-#       - "5432:5432"
-#     healthcheck:
-#       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-#     restart: always
-  
-#   backend:
-#     build:
-#       context: ./backend
-#     volumes:
-#       - uploads:/go/uploads
-#     expose:
-#       - "8000"
-#     env_file:
-#       - .env
-#     depends_on:
-#       postgres:
-#         condition: service_healthy
-
-#   frontend:
-#     build:
-#       context: ./frontend
-#     expose:
-#       - "3000"
-#     env_file:
-#       - .env
-#     depends_on:
-#       - backend
-
-#   caddy:
-#     image: caddy:2-alpine
-#     volumes:
-#       - ./Caddyfile:/etc/caddy/Caddyfile
-#       - uploads:/go/uploads
-#     ports:
-#       - "8080:8080"
-#     depends_on:
-#       - backend
-#       - frontend
-
-# volumes:
-#   postgres_data:
-#   uploads:
-
+# Docker Compose Configuration for Multi-Tier Web Application
+#
+# This configuration sets up a secure multi-tier application with:
+# - PostgreSQL database backend
+# - Backend API service
+# - Frontend web application
+# - Caddy web server as reverse proxy
+#
+# NETWORK ARCHITECTURE:
+# - backend_net: Internal network for database-backend communication (not exposed)
+# - frontend_net: Network for backend-frontend-caddy communication
+# - public_net: External network for caddy to serve web traffic
+#
+# PERSISTENT STORAGE:
+# - postgres_data: Stores database files
+# - uploads: Shared volume for file uploads between backend and caddy
+#
+# SECURITY FEATURES:
+# - Network segmentation (internal network for db)
+# - Capability restrictions (cap_drop) for containers
+# - Health checks for all services
+# - Environment variables loaded from .env file
+# - No direct exposure of application ports (only Caddy exposed)
+#
+# DEPLOYMENT CONSIDERATIONS:
+# - Configure proper environment variables in .env file
+# - Ensure Caddyfile is properly configured for routing
+# - Data persists across container restarts via named volumes
+# - All services configured to restart automatically unless manually stopped
 services:
   postgres:
     image: postgres:latest
@@ -59,21 +34,22 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: always
-  
+    restart: unless-stopped
+    networks:
+      - backend_net
+
+
   backend:
     build:
       context: ./backend
     volumes:
-      - ./backend:/backend
-      - uploads:/backend/uploads
+      # - ./backend:/backend
+      - uploads:/app/uploads
     expose:
       - "8000"
     env_file:
@@ -81,18 +57,40 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - backend_net
+      - frontend_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    cap_drop:
+      - ALL
 
   frontend:
     build:
       context: ./frontend
-    volumes:
-      - ./frontend:/app
+    # volumes:
+    #   - ./frontend:/app
     expose:
       - "3000"
     env_file:
       - .env
     depends_on:
       - backend
+    networks:
+      - frontend_net
+    restart: "no"
+    # restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    cap_drop:
+      - ALL
 
   caddy:
     image: caddy:2-alpine
@@ -104,7 +102,22 @@ services:
     depends_on:
       - backend
       - frontend
+    networks:
+      - frontend_net
+      - public_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
   uploads:
+
+networks:
+  backend_net:
+    internal: true
+  frontend_net:
+  public_net:

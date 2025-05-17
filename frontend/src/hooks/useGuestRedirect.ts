@@ -12,5 +12,5 @@ export function useGuestRedirect(target: string = "/dashboard") {
     if (!loading && user) {
       router.replace(target);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, target]);
 }
