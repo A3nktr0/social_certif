@@ -11,6 +11,9 @@ type contextKey string
 
 const UserIDKey = contextKey("userID")
 
+// RequireAuth is a middleware that checks if the user is authenticated
+// by verifying the JWT token in the request. If authenticated, it adds
+// the user ID to the request context.
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, err := auth.ParseJWTFromRequest(r)
@@ -25,6 +28,7 @@ func RequireAuth(next http.Handler) http.Handler {
 }
 
 // GetUserID retrieves the authenticated user's ID from context
+// set by the RequireAuth middleware.
 func GetUserID(r *http.Request) string {
 	id, _ := r.Context().Value(UserIDKey).(string)
 	return id

@@ -588,7 +588,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 	policy := bluemonday.StrictPolicy()
 	content := policy.Sanitize(rawContent)
 
-	// Step 1: Get existing image path for deletion check
 	var existingImage sql.NullString
 	err = db.DB.QueryRow(`SELECT image FROM posts WHERE id = $1 AND user_id = $2`, postID, userID).Scan(&existingImage)
 	if err == sql.ErrNoRows {
@@ -599,10 +598,8 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Optional image deletion or replacement
 	imageURL := r.FormValue("image_url") // "" = remove, value = keep (or will be overridden below)
 
-	// Step 2: Handle new image upload
 	file, handler, err := r.FormFile("image")
 	if err == nil && file != nil {
 		defer file.Close()
@@ -650,7 +647,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		imageURL = "/static/posts/" + filename
 	}
 
-	// Step 3: Determine if the old image should be deleted
 	imageChanged := (imageURL == "" && existingImage.Valid) || (imageURL != "" && imageURL != existingImage.String)
 	if imageChanged && existingImage.Valid && existingImage.String != "/static/posts/default.jpg" {
 		_ = utils.DeleteImageFromTable(
@@ -666,7 +662,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	// Step 4: Prepare value for DB update
 	var imageColumn interface{}
 	if imageURL == "" {
 		imageColumn = nil
@@ -674,7 +669,6 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		imageColumn = imageURL
 	}
 
-	// Step 5: Update the post
 	res, err := db.DB.Exec(`
 		UPDATE posts 
 		SET content = $1, image = $2
@@ -697,6 +691,9 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 
 // ----------- Delete Post -----------
 
+// DeletePost deletes a post and its associated image if applicable.
+// It checks if the user is the owner of the post before proceeding.
+// If the post has an image, it will be deleted from the filesystem.
 func DeletePost(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	postID := chi.URLParam(r, "id")

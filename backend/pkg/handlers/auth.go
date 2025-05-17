@@ -133,7 +133,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p := bluemonday.StrictPolicy()
-
 	input.Email = p.Sanitize(strings.TrimSpace(input.Email))
 	input.Password = strings.TrimSpace(input.Password)
 

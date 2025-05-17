@@ -9,7 +9,8 @@ import CommentForm from "@/components/comments/CommentForm";
 import CommentList from "@/components/comments/CommentList";
 
 export default function PostDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
 
