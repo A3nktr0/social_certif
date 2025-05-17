@@ -187,7 +187,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	commentID := chi.URLParam(r, "id")
 
-	// Step 1: Get existing comment
 	var existingImage sql.NullString
 	var authorID string
 	err := db.DB.QueryRow(`
@@ -202,7 +201,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 2: Parse input
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
@@ -219,7 +217,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 
 	imageURL := r.FormValue("image_url") // "" means remove
 
-	// Step 3: Handle image upload
 	file, handler, err := r.FormFile("image")
 	if err == nil && file != nil {
 		defer file.Close()
@@ -263,7 +260,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		imageURL = "/static/comments/" + filename
 	}
 
-	// Step 4: If the image is being removed or replaced, delete old one
 	shouldDeleteOld := (imageURL == "" && existingImage.Valid) || (imageURL != "" && imageURL != existingImage.String)
 	if shouldDeleteOld && existingImage.Valid && existingImage.String != "/static/comments/default.jpg" {
 		_ = utils.DeleteImageFromTable(
@@ -279,7 +275,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	// Step 5: Prepare updated image value
 	var imageCol interface{}
 	if imageURL == "" {
 		imageCol = nil // remove image
@@ -287,7 +282,6 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 		imageCol = imageURL // update to new one
 	}
 
-	// Step 6: Perform the update
 	res, err := db.DB.Exec(`
 		UPDATE comments SET content = $1, image = $2
 		WHERE id = $3 AND user_id = $4
@@ -312,7 +306,21 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	commentID := chi.URLParam(r, "id")
 
-	err := utils.DeleteImageFromTable(
+	// check if user is allowed to delete
+	var authorID string
+	err := db.DB.QueryRow(`
+		SELECT user_id FROM comments WHERE id = $1
+	`, commentID).Scan(&authorID)
+	if err != nil {
+		http.Error(w, "Comment not found", http.StatusNotFound)
+		return
+	}
+	if authorID != userID {
+		http.Error(w, "Not authorized", http.StatusForbidden)
+		return
+	}
+
+	err = utils.DeleteImageFromTable(
 		db.DB,
 		"comments",
 		"id",

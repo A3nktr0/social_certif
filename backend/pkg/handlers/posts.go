@@ -562,6 +562,18 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	postID := chi.URLParam(r, "id")
 
+	// Check if user is owner of the post
+	var postOwnerID string
+	err := db.DB.QueryRow(`SELECT user_id FROM posts WHERE id = $1`, postID).Scan(&postOwnerID)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+	if postOwnerID != userID {
+		http.Error(w, "Not authorized to edit this post", http.StatusForbidden)
+		return
+	}
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
@@ -578,7 +590,7 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 
 	// Step 1: Get existing image path for deletion check
 	var existingImage sql.NullString
-	err := db.DB.QueryRow(`SELECT image FROM posts WHERE id = $1 AND user_id = $2`, postID, userID).Scan(&existingImage)
+	err = db.DB.QueryRow(`SELECT image FROM posts WHERE id = $1 AND user_id = $2`, postID, userID).Scan(&existingImage)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Post not found or unauthorized", http.StatusForbidden)
 		return
@@ -689,8 +701,20 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	postID := chi.URLParam(r, "id")
 
+	// check if owner of the post
+	var postOwnerID string
+	err := db.DB.QueryRow(`SELECT user_id FROM posts WHERE id = $1`, postID).Scan(&postOwnerID)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+	if postOwnerID != userID {
+		http.Error(w, "Not authorized to delete this post", http.StatusForbidden)
+		return
+	}
+
 	// Delete the image using the helper
-	err := utils.DeleteImageFromTable(
+	err = utils.DeleteImageFromTable(
 		db.DB,
 		"posts",           // table name
 		"id",              // id field
