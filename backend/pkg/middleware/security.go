@@ -12,6 +12,7 @@ const (
 	nonceContextKey contextKey = "nonce"
 )
 
+// SecurityHeadersMiddleware adds security headers to the response
 func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Generate a nonce for this request
@@ -37,6 +38,9 @@ func generateNonce() string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
+// CORSMiddleware handles CORS preflight requests and sets CORS headers
+// to allow cross-origin requests from the specified origin.
+// It also allows credentials and specific HTTP methods and headers.
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "https://localhost:8080/")

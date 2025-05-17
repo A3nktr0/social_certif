@@ -82,6 +82,18 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const fileSize = file.size / 1024 / 1024; // size in MB
+    if (fileSize > 2) {
+      setError("File size exceeds 2MB");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
+      setError("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
+      return;
+    }
+    setError("");
+
     const fd = new FormData();
     fd.append("avatar", file);
     
