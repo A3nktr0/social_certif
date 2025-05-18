@@ -26,9 +26,9 @@ func main() {
 	r.Get("/api/health", handlers.Health)
 	r.Post("/api/register", middleware.RateLimit(handlers.Register))
 	r.Post("/api/login", middleware.RateLimit(handlers.Login))
-	r.Post("/api/logout", handlers.Logout)
 
 	// Authenticated
+	r.With(middleware.RequireAuth).Post("/api/logout", handlers.Logout)
 	r.With(middleware.RequireAuth).Get("/api/me", handlers.Me)
 	r.With(middleware.RequireAuth).Delete("/api/me", handlers.DeleteMyProfile)
 	r.With(middleware.RequireAuth).Get("/api/me/data", handlers.GetMyPersonalData)
@@ -117,14 +117,10 @@ func main() {
 	// websocket
 	r.With(middleware.RequireAuth).Get("/api/ws", websocket.ServeWS)
 
-	// Static files
-	fs := http.StripPrefix("/static/", http.FileServer(http.Dir("./uploads")))
-	r.Handle("/static/*", fs)
-
 	// Start server
-	port := os.Getenv("PORT")
+	port := os.Getenv("BACKEND_PORT")
 	if port == "" {
-		port = "8080"
+		port = "8000"
 	}
 
 	go websocket.GlobalHub.Run()

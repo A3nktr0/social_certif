@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"socialbackend/pkg/authz"
 	"socialbackend/pkg/db"
+	"socialbackend/pkg/helpers"
 	"socialbackend/pkg/middleware"
 	"socialbackend/pkg/utils"
 
@@ -356,7 +356,7 @@ func GetPostByID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	postID := chi.URLParam(r, "id")
 
-	allowed, err := authz.CanUserAccessPost(userID, postID)
+	allowed, err := helpers.CanUserAccessPost(userID, postID)
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return

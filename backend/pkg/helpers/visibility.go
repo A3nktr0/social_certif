@@ -1,4 +1,4 @@
-package authz
+package helpers
 
 import (
 	"socialbackend/pkg/db"

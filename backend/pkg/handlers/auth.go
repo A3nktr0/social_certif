@@ -8,7 +8,7 @@ import (
 
 	"socialbackend/pkg/auth"
 	"socialbackend/pkg/db"
-	"socialbackend/pkg/users"
+	"socialbackend/pkg/helpers"
 
 	"strings"
 
@@ -36,6 +36,7 @@ type LoginInput struct {
 func Health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
+
 func Register(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(5 << 20) // 5MB max
 	if err != nil {
@@ -110,7 +111,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// avatar saving
-	avatarPath, err := users.SaveUploadedAvatar(r, userID)
+	avatarPath, err := helpers.SaveUploadedAvatar(r, userID)
 	if err != nil {
 		http.Error(w, "Failed to process avatar: "+err.Error(), http.StatusBadRequest)
 		return

@@ -25,9 +25,6 @@ func DeleteImageFromTable(db *sql.DB, table string, idField string, id any, user
 	if err == sql.ErrNoRows {
 		return nil
 	} else if err != nil {
-		fmt.Println("Error querying database:", err)
-		fmt.Println("Query:", query)
-		fmt.Println("Parameters:", id, userID)
 		return err
 	}
 

@@ -11,8 +11,8 @@ import (
 
 	"socialbackend/pkg/constants"
 	"socialbackend/pkg/db"
+	"socialbackend/pkg/helpers"
 	"socialbackend/pkg/middleware"
-	"socialbackend/pkg/notifications"
 	"socialbackend/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -502,7 +502,7 @@ func RequestToJoinGroup(w http.ResponseWriter, r *http.Request) {
 		var creatorID string
 		_ = db.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = $1`, groupID).Scan(&creatorID)
 
-		notifications.Create(creatorID, userID, constants.NotifGroupJoinRequest, "requested to join your group", map[string]interface{}{
+		helpers.Create(creatorID, userID, constants.NotifGroupJoinRequest, "requested to join your group", map[string]interface{}{
 			"group_id": groupID,
 			"user_id":  userID,
 		})
@@ -609,7 +609,7 @@ func InviteUserToGroup(w http.ResponseWriter, r *http.Request) {
 	msg := "invited you to join the group " + groupName
 
 	// Send WebSocket notification
-	notifications.Create(targetUserID, senderID, constants.NotifGroupInvite, msg, map[string]interface{}{
+	helpers.Create(targetUserID, senderID, constants.NotifGroupInvite, msg, map[string]interface{}{
 		"group_id": groupID,
 	})
 
@@ -715,7 +715,7 @@ func AcceptJoinRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	tx.Commit()
 
-	notifications.Create(requestedUserID, creatorID, constants.NotifGroupJoinAccepted, "Your join request was accepted", map[string]interface{}{
+	helpers.Create(requestedUserID, creatorID, constants.NotifGroupJoinAccepted, "Your join request was accepted", map[string]interface{}{
 		"group_id": groupID,
 		"user_id":  requestedUserID,
 	})
@@ -769,7 +769,7 @@ func RejectJoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notifications.Create(requestedUserID, creatorID, constants.NotifGroupJoinRejected, "Your join request was rejected", map[string]interface{}{
+	helpers.Create(requestedUserID, creatorID, constants.NotifGroupJoinRejected, "Your join request was rejected", map[string]interface{}{
 		"group_id": groupID,
 		"user_id":  requestedUserID,
 	})
@@ -816,7 +816,7 @@ func AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	var creatorID string
 	_ = db.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = $1`, groupID).Scan(&creatorID)
 
-	notifications.Create(creatorID, userID, constants.NotifGroupInviteAccepted, "accepted your group invitation", map[string]interface{}{
+	helpers.Create(creatorID, userID, constants.NotifGroupInviteAccepted, "accepted your group invitation", map[string]interface{}{
 		"group_id": groupID,
 	})
 
@@ -859,7 +859,7 @@ func RejectInvite(w http.ResponseWriter, r *http.Request) {
 	var creatorID string
 	_ = db.DB.QueryRow(`SELECT creator_id FROM groups WHERE id = $1`, groupID).Scan(&creatorID)
 
-	notifications.Create(creatorID, userID, constants.NotifGroupInviteRejected, "rejected your group invitation", map[string]interface{}{
+	helpers.Create(creatorID, userID, constants.NotifGroupInviteRejected, "rejected your group invitation", map[string]interface{}{
 		"group_id": groupID,
 	})
 

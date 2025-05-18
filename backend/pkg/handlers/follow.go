@@ -8,9 +8,9 @@ import (
 
 	"socialbackend/pkg/constants"
 	"socialbackend/pkg/db"
+	"socialbackend/pkg/helpers"
 	"socialbackend/pkg/middleware"
 	"socialbackend/pkg/models"
-	"socialbackend/pkg/notifications"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -64,7 +64,7 @@ func FollowUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		notifications.Create(followeeID, followerID, notifType, notifContent, nil)
+		helpers.Create(followeeID, followerID, notifType, notifContent, nil)
 
 	case err == nil && existingStatus != newStatus:
 		// Prevent auto-accept from pending
@@ -79,7 +79,7 @@ func FollowUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			notifications.Create(followeeID, followerID, notifType, notifContent, nil)
+			helpers.Create(followeeID, followerID, notifType, notifContent, nil)
 		}
 
 	case err != nil:
@@ -175,7 +175,7 @@ func AcceptFollowRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Notify the follower
-	notifications.Create(followerID, currentUserID, constants.NotifFollowAccepted, "Your follow request was accepted.", nil)
+	helpers.Create(followerID, currentUserID, constants.NotifFollowAccepted, "Your follow request was accepted.", nil)
 
 	_, err = db.DB.Exec(`
 		DELETE FROM notifications

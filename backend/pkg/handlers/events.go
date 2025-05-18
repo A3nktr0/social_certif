@@ -8,8 +8,8 @@ import (
 
 	"socialbackend/pkg/constants"
 	"socialbackend/pkg/db"
+	"socialbackend/pkg/helpers"
 	"socialbackend/pkg/middleware"
-	"socialbackend/pkg/notifications"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -78,7 +78,7 @@ func CreateGroupEvent(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var memberID string
 			if err := rows.Scan(&memberID); err == nil {
-				notifications.Create(memberID, userID, constants.NotifGroupEventCreated,
+				helpers.Create(memberID, userID, constants.NotifGroupEventCreated,
 					msg, map[string]interface{}{
 						"group_id": groupID,
 						"event_id": eventID,

@@ -1,4 +1,4 @@
-package notifications
+package helpers
 
 import (
 	"database/sql"

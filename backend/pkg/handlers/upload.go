@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"socialbackend/pkg/auth"
 	"socialbackend/pkg/db"
-	"socialbackend/pkg/users"
+	"socialbackend/pkg/helpers"
 	"socialbackend/pkg/utils"
 )
 
@@ -31,7 +31,7 @@ func UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAvatarPath, err := users.SaveUploadedAvatar(r, claims.UserID)
+	newAvatarPath, err := helpers.SaveUploadedAvatar(r, claims.UserID)
 	if err != nil {
 		http.Error(w, "Failed to save avatar: "+err.Error(), http.StatusBadRequest)
 		return
