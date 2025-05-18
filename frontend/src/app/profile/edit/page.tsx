@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/services/axios";
 import ProfileFormFields from "@/components/profile/ProfileFormFields";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function EditProfilePage() {
   const { user, loading, setUser } = useAuth();
@@ -17,15 +19,16 @@ export default function EditProfilePage() {
     is_private: "false",
     dob: "",
   });
-  //   const [avatar, setAvatar] = useState<File | null>(null);
   const [error, setError] = useState("");
+
+  const { loading: redirectLoading } = useAuthRedirect();
 
   useEffect(() => {
     // Redirect to login if not authenticated
     if (!loading && !user) {
-      router.replace('/login');
+      router.replace("/login");
     }
-    
+
     // Populate form fields when user data is available
     if (user) {
       setForm({
@@ -70,6 +73,10 @@ export default function EditProfilePage() {
       setError(errorObj?.response?.data || "Update failed");
     }
   };
+
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <main className="flex justify-center px-4 py-10 bg-gray-50 min-h-screen">

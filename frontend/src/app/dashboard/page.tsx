@@ -2,11 +2,15 @@
 
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
+  const { loading: redirectLoading } = useAuthRedirect();
 
-  if (loading) return <p className="text-center text-gray-500">Loading...</p>;
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
   if (!user) return null;
 
   return (

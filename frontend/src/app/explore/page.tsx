@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 type User = {
   id: string;
@@ -19,22 +20,20 @@ export default function ExplorePage() {
   const [people, setPeople] = useState<User[]>([]);
   const [error, setError] = useState("");
   const { user, loading } = useAuth();
-  const router = useRouter();
+  const { loading: redirectLoading } = useAuthRedirect();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [user, loading, router]);
-
+  
   useEffect(() => {
     const fetchExplore = async () => {
       try {
         const res = await api.get("/explore");
         setPeople(Array.isArray(res.data) ? res.data : []);
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'response' in err && 
-            err.response && typeof err.response === 'object' && 'data' in err.response) {
+        if (
+          err && typeof err === "object" && "response" in err &&
+          err.response && typeof err.response === "object" &&
+          "data" in err.response
+        ) {
           setError(String(err.response.data));
         } else {
           setError("Failed to load users.");
@@ -43,7 +42,7 @@ export default function ExplorePage() {
     };
     fetchExplore();
   }, []);
-
+  
   const handleFollow = async (id: string) => {
     try {
       await api.post(`/follow/${id}`);
@@ -52,7 +51,10 @@ export default function ExplorePage() {
       alert("Failed to follow user.");
     }
   };
-
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
+  
   return (
     <main className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">

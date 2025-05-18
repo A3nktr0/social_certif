@@ -5,20 +5,26 @@ import Link from "next/link";
 import api from "@/lib/services/axios";
 import { Post } from "@/types/post";
 import PostCard from "@/components/posts/PostCard";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchFeed = async () => {
+    const { user, loading } = useAuth();
+    const { loading: redirectLoading } = useAuthRedirect();
+  
+    
+    useEffect(() => {
+      const fetchFeed = async () => {
       try {
         const res = await api.get("/posts/feed");
         setPosts(Array.isArray(res.data) ? res.data : []);
       } catch (err: unknown) {
         if (err && typeof err === 'object' && 'response' in err && 
-            err.response && typeof err.response === 'object' && 'data' in err.response) {
-          setError(String(err.response.data));
+          err.response && typeof err.response === 'object' && 'data' in err.response) {
+            setError(String(err.response.data));
         } else {
           setError("Failed to load users.");
         }
@@ -26,6 +32,9 @@ export default function FeedPage() {
     };
     fetchFeed();
   }, []);
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-10 px-4">

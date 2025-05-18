@@ -7,17 +7,23 @@ import { Post } from "@/types/post";
 import PostCard from "@/components/posts/PostCard";
 import CommentForm from "@/components/comments/CommentForm";
 import CommentList from "@/components/comments/CommentList";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function PostDetailPage() {
   const params = useParams();
   const id = params?.id as string;
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
+    const { user, loading } = useAuth();
+    const { loading: redirectLoading } = useAuthRedirect();
+  
+    
+    useEffect(() => {
+      if (!id) return;
 
-  useEffect(() => {
-    if (!id) return;
-
-    api.get(`/posts/${id}`)
+      api.get(`/posts/${id}`)
       .then((res) => setPost(res.data))
       .catch((err) => {
         if (err.response?.status === 403) {
@@ -28,7 +34,11 @@ export default function PostDetailPage() {
           setError("Failed to load post.");
         }
       });
-  }, [id]);
+    }, [id]);
+
+    // Show loading state if either auth context or redirect is loading
+    if (loading || redirectLoading) return <LoadingSpinner />;
+    if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-10 px-4">

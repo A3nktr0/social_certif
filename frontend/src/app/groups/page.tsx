@@ -6,12 +6,16 @@ import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
 import { Group } from "@/types/group";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function GroupsPage() {
-  const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [error, setError] = useState("");
+  const { user, loading } = useAuth();
+  const { loading: redirectLoading } = useAuthRedirect();
 
+  
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -31,7 +35,7 @@ export default function GroupsPage() {
             typeof response.data === "string"
               ? response.data
               : "Failed to load groups."
-          );
+            );
         } else {
           setError("Failed to load groups.");
         }
@@ -39,6 +43,10 @@ export default function GroupsPage() {
     };
     if (user) fetchGroups();
   }, [user]);
+  
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-10 px-4">

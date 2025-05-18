@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/services/axios";
 import { Event } from "@/types/event";
@@ -10,6 +10,8 @@ import EventAdminActions from "@/components/groups/EventAdminActions";
 import { RSVP } from "@/types/event";
 import EditEventModal from "@/components/groups/EditEventModal";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function EventDetailPage() {
   const { id: groupId, eventId } = useParams() as {
@@ -22,8 +24,8 @@ export default function EventDetailPage() {
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const { user, loading } = useAuth();
-
   const [accessDenied, setAccessDenied] = useState(false);
+  const { loading: redirectLoading } = useAuthRedirect();
 
   // Use useCallback to prevent unnecessary re-creation of the function
   const fetchEvent = useCallback(async () => {
@@ -40,9 +42,11 @@ export default function EventDetailPage() {
           data?: unknown;
         };
       };
-      
+
       const errorObj = err as ErrorWithResponse;
-      if (errorObj?.response?.status === 403 || errorObj?.response?.status === 404) {
+      if (
+        errorObj?.response?.status === 403 || errorObj?.response?.status === 404
+      ) {
         setAccessDenied(true);
       } else {
         router.replace(`/groups/${groupId}`);
@@ -54,7 +58,7 @@ export default function EventDetailPage() {
     // Check authentication status and fetch data
     if (!loading) {
       if (!user) {
-        router.replace('/login');
+        router.replace("/login");
       } else {
         fetchEvent();
       }
@@ -66,13 +70,9 @@ export default function EventDetailPage() {
     router.replace(`/groups/${groupId}/events/${eventId}`);
   };
 
-  if (loading) {
-    return (
-      <p className="text-center py-10 text-gray-500 text-sm">
-        Loading event...
-      </p>
-    );
-  }
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   if (accessDenied) {
     return (
@@ -81,7 +81,8 @@ export default function EventDetailPage() {
           <div className="text-4xl">🔒</div>
           <h2 className="text-lg font-semibold text-gray-800">Access Denied</h2>
           <p className="text-sm text-gray-600">
-            You don’t have permission to view this event. Only group admins or the creator can access event details.
+            You don’t have permission to view this event. Only group admins or
+            the creator can access event details.
           </p>
           <button
             onClick={() => router.back()}

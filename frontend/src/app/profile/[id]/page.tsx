@@ -11,10 +11,11 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import TabsSwitcher from "@/components/profile/TabsSwitcher";
 import PostCard from "@/components/posts/PostCard";
 import DeleteProfileModal from "@/components/profile/DeleteProfileModal";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Profile } from "@/types/profile";
 import { Post } from "@/types/post";
-import Loading from "@/app/loading";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -22,16 +23,20 @@ export default function ProfilePage() {
   const id = typeof rawId === "string" ? rawId.trim() : "";
   const safeId = encodeURIComponent(id);
 
-  const { user, setUser } = useAuth();
+  const { user, setUser, loading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"followers" | "following">("followers");
-  const [stats, setStats] = useState<{ followers: number; following: number } | null>(null);
-  const [followStatus, setFollowStatus] = useState<"none" | "pending" | "accepted">("none");
+  const [stats, setStats] = useState<
+    { followers: number; following: number } | null
+  >(null);
+  const [followStatus, setFollowStatus] = useState<
+    "none" | "pending" | "accepted"
+  >("none");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { loading: redirectLoading } = useAuthRedirect();
   const isOwnProfile = user?.id === id;
-
 
   const fetchStats = useCallback(async () => {
     if (!isOwnProfile) return;
@@ -83,6 +88,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size and type
     const fileSize = file.size / 1024 / 1024; // size in MB
     if (fileSize > 2) {
       setError("File size exceeds 2MB");
@@ -92,11 +98,24 @@ export default function ProfilePage() {
       setError("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
       return;
     }
+
+    // Verify extension
+    const validExtensions = [".jpg", ".jpeg", ".png", ".gif"];
+    const fileName = file.name.toLowerCase();
+    const isValidExtension = validExtensions.some((ext) =>
+      fileName.endsWith(ext)
+    );
+    if (!isValidExtension) {
+      setError(
+        "Invalid file extension. Only JPG, JPEG, PNG, and GIF are allowed.",
+      );
+      return;
+    }
     setError("");
 
     const fd = new FormData();
     fd.append("avatar", file);
-    
+
     try {
       const response = await api.post("/upload/avatar", fd);
       if (response.status === 200) {
@@ -107,10 +126,13 @@ export default function ProfilePage() {
         throw new Error(`Server returned ${response.status}`);
       }
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: string; status?: number }; message?: string };
+      const errorObj = err as {
+        response?: { data?: string; status?: number };
+        message?: string;
+      };
       const statusCode = errorObj?.response?.status;
       let errorMessage = "Unable to upload avatar";
-      
+
       if (statusCode === 500) {
         errorMessage = "Server error occurred. Please try again later.";
       } else if (errorObj?.response?.data) {
@@ -118,7 +140,7 @@ export default function ProfilePage() {
       } else if (errorObj?.message) {
         errorMessage = errorObj.message;
       }
-      
+
       setError(errorMessage);
       console.error("Avatar upload failed:", errorObj);
     }
@@ -152,11 +174,9 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <Loading />
-    );
-  }
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading || !profile) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -217,9 +237,9 @@ export default function ProfilePage() {
                 download={"PersonalData.json"}
                 className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-white text-sm py-2 rounded"
                 target="_blank"
-            >
+              >
                 Request my personal data
-            </Link>
+              </Link>
               <button
                 onClick={() => setShowDeleteModal(true)}
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded"
@@ -234,11 +254,9 @@ export default function ProfilePage() {
                 followingCount={stats?.following || 0}
               />
 
-              {tab === "followers" ? (
-                <FollowersPanel refreshStats={fetchStats} />
-              ) : (
-                <FollowingPanel refreshStats={fetchStats} />
-              )}
+              {tab === "followers"
+                ? <FollowersPanel refreshStats={fetchStats} />
+                : <FollowingPanel refreshStats={fetchStats} />}
             </>
           )}
         </aside>
@@ -246,20 +264,21 @@ export default function ProfilePage() {
         {/* Right: User Activity Feed */}
         <main className="flex-1 space-y-6">
           <h2 className="text-xl font-semibold text-gray-800">User Activity</h2>
-          {posts.length === 0 ? (
-            <p className="text-sm text-gray-500">No posts yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
-          )}
+          {posts.length === 0
+            ? <p className="text-sm text-gray-500">No posts yet.</p>
+            : (
+              <div className="space-y-4">
+                {posts.map((post) => <PostCard key={post.id} post={post} />)}
+              </div>
+            )}
         </main>
       </div>
 
       {/* Modal */}
-      <DeleteProfileModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} />
+      <DeleteProfileModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

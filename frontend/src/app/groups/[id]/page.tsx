@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "@/lib/services/axios";
 import { useAuth } from "@/context/AuthContext";
 import { Group } from "@/types/group";
@@ -12,6 +12,8 @@ import GroupActions from "@/components/groups/GroupActions";
 import GroupContent from "@/components/groups/GroupContent";
 import InviteModal from "@/components/groups/InviteModal";
 import EditGroupModal from "@/components/groups/EditGroupModal";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 type TabOption = "posts" | "events" | "members";
 
@@ -30,6 +32,7 @@ export default function GroupDetailPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [joinRequested, setJoinRequested] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const { loading: redirectLoading } = useAuthRedirect();
 
   const fetchGroup = useCallback(async () => {
     try {
@@ -44,7 +47,7 @@ export default function GroupDetailPage() {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.replace('/login');
+        router.replace("/login");
       } else if (id) {
         fetchGroup();
       }
@@ -74,7 +77,9 @@ export default function GroupDetailPage() {
   };
 
   const handleDeleteGroup = async () => {
-    const confirmDelete = confirm("Are you sure you want to delete this group?");
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this group?",
+    );
     if (!confirmDelete) return;
 
     try {
@@ -85,6 +90,10 @@ export default function GroupDetailPage() {
       alert("Failed to delete group.");
     }
   };
+
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-4">
@@ -97,18 +106,20 @@ export default function GroupDetailPage() {
 
             {!group.is_member && (
               <div className="flex justify-center mt-4">
-                {joinRequested ? (
-                  <p className="text-sm text-green-600 font-medium">
-                    Request sent ✅
-                  </p>
-                ) : (
-                  <button
-                    onClick={handleRequestJoin}
-                    className="px-5 py-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-sm shadow transition cursor-pointer"
-                  >
-                    Request to Join Group
-                  </button>
-                )}
+                {joinRequested
+                  ? (
+                    <p className="text-sm text-green-600 font-medium">
+                      Request sent ✅
+                    </p>
+                  )
+                  : (
+                    <button
+                      onClick={handleRequestJoin}
+                      className="px-5 py-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-sm shadow transition cursor-pointer"
+                    >
+                      Request to Join Group
+                    </button>
+                  )}
               </div>
             )}
 

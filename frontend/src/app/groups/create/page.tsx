@@ -6,6 +6,8 @@ import api from "@/lib/services/axios";
 import DOMPurify from "dompurify";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function CreateGroupPage() {
   const router = useRouter();
@@ -16,29 +18,31 @@ export default function CreateGroupPage() {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
+  const { loading: redirectLoading } = useAuthRedirect();
   
   // Check authentication
+  
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
-
-
+  
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     setSubmitting(true);
-
+    
     const safeName = DOMPurify.sanitize(name.trim(), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
     const safeDesc = DOMPurify.sanitize(description.trim(), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-
+    
     if (!safeName) {
       setError("Group name is required.");
       setSubmitting(false);
       return;
     }
-
+    
     if (avatar && (!avatar.type.startsWith("image/") || avatar.size > 2 * 1024 * 1024)) {
       setError("Avatar must be an image and under 2MB.");
       setSubmitting(false);
@@ -54,7 +58,7 @@ export default function CreateGroupPage() {
       await api.post("/groups", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
+      
       router.push("/groups");
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: string } };
@@ -64,6 +68,10 @@ export default function CreateGroupPage() {
     }
   };
 
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
+  
   return (
     <main className="min-h-screen bg-gray-100 py-12 px-4">
       <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-lg space-y-6">

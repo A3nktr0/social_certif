@@ -9,6 +9,8 @@ import DOMPurify from "dompurify";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { BaseUser } from "@/types/user";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface Follower {
   id: string;
@@ -28,11 +30,12 @@ export default function CreatePostPage() {
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [targetUsers, setTargetUsers] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const { loading: redirectLoading } = useAuthRedirect();
 
   useEffect(() => {
     // Check authentication
     if (!loading && !user) {
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [user, loading, router]);
 
@@ -83,6 +86,10 @@ export default function CreatePostPage() {
       setError(errorObj?.response?.data || "Failed to create post.");
     }
   };
+
+  // Show loading state if either auth context or redirect is loading
+  if (loading || redirectLoading) return <LoadingSpinner />;
+  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-100 py-12 px-4">

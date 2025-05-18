@@ -1,12 +1,10 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import DesktopNavbar from "./DesktopNavbar";
-import MobileNavbar from "./MobileNavbar";
-import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
-export default function Navbar() {
+export default function NotFoundPage() {
   const { user, loading } = useAuth();
   const { loading: redirectLoading } = useAuthRedirect();
 
@@ -15,9 +13,10 @@ export default function Navbar() {
   if (!user) return null;
 
   return (
-    <>
-      <DesktopNavbar />
-      <MobileNavbar />
-    </>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-white">
+      <div className="text-center max-w-md">
+        <LoadingSpinner isFullScreen={false} size="md" />
+      </div>
+    </div>
   );
 }

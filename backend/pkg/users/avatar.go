@@ -31,22 +31,26 @@ func SaveUploadedAvatar(r *http.Request, userID string) (string, error) {
 	// Validate MIME type by sniffing first 512 bytes
 	buffer := make([]byte, 512)
 	if _, err := file.Read(buffer); err != nil {
+		fmt.Println("Error reading file header:", err)
 		return "", fmt.Errorf("could not read file header")
 	}
 	contentType := http.DetectContentType(buffer)
 
 	if !strings.HasPrefix(contentType, "image/") {
+		fmt.Println("Invalid content type:", contentType)
 		return "", fmt.Errorf("invalid content type: %s", contentType)
 	}
 
 	// Reset file pointer to beginning before saving
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		fmt.Println("Error resetting file reader:", err)
 		return "", fmt.Errorf("failed to reset file reader")
 	}
 
 	// Validate extension
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+		fmt.Println("Invalid file extension:", ext)
 		return "", fmt.Errorf("invalid file extension")
 	}
 
@@ -55,11 +59,13 @@ func SaveUploadedAvatar(r *http.Request, userID string) (string, error) {
 
 	out, err := os.Create(savePath)
 	if err != nil {
+		fmt.Println("Error creating file:", err)
 		return "", fmt.Errorf("could not save file: %w", err)
 	}
 	defer out.Close()
 
 	if _, err := io.Copy(out, file); err != nil {
+		fmt.Println("Error writing file:", err)
 		return "", fmt.Errorf("failed to write avatar: %w", err)
 	}
 
