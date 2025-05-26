@@ -15,6 +15,9 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// GenerateJWT generates a JWT token for the given user ID.
+// The token expires in 24 hours.
+// It uses the HS256 signing method and includes the user ID in the claims.
 func GenerateJWT(userID string) (string, error) {
 	expiration := time.Now().Add(24 * time.Hour)
 

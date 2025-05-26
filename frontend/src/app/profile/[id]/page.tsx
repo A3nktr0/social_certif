@@ -48,41 +48,41 @@ export default function ProfilePage() {
     }
   }, [isOwnProfile]);
 
-  useEffect(() => {
-    fetchStats();
-  }, [isOwnProfile, fetchStats]);
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await api.get(`/profile/${safeId}`);
+      setProfile(res.data);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get(`/profile/${safeId}`);
-        setProfile(res.data);
-
-        if (!isOwnProfile) {
-          const followRes = await api.get(`/follow/status/${safeId}`);
-          setFollowStatus(followRes.data.status);
-        }
-      } catch (err: unknown) {
-        const errorObj = err as { response?: { data?: string } };
-        const msg = errorObj?.response?.data || "Unable to load profile";
-        setError(msg);
+      if (!isOwnProfile) {
+        const followRes = await api.get(`/follow/status/${safeId}`);
+        setFollowStatus(followRes.data.status);
       }
-    };
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: string } };
+      const msg = errorObj?.response?.data || "Unable to load profile";
+      setError(msg);
+    }
+  }, [safeId, isOwnProfile]);
 
-    const fetchUserPosts = async () => {
-      try {
-        const res = await api.get(`/posts/by-user/${safeId}`);
-        setPosts(Array.isArray(res.data) ? res.data : []);
-      } catch {
-        // silent fail
-      }
-    };
+  const fetchUserPosts = useCallback(async () => {
+    try {
+      const res = await api.get(`/posts/by-user/${safeId}`);
+      setPosts(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      // silent fail
+    }
+  }, [safeId]);
 
+  useEffect(() => {
     if (safeId) {
       fetchProfile();
       fetchUserPosts();
     }
-  }, [safeId, isOwnProfile]);
+  }, [safeId, fetchProfile, fetchUserPosts]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -235,7 +235,7 @@ export default function ProfilePage() {
               <Link
                 href="/api/me/data"
                 download={"PersonalData.json"}
-                className="block w-full text-center bg-yellow-400 hover:bg-yellow-500 text-white text-sm py-2 rounded"
+                className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded"
                 target="_blank"
               >
                 Request my personal data

@@ -10,6 +10,8 @@ import (
 
 var DB *sql.DB
 
+// Init initializes the database connection
+// It uses the DATABASE_URL environment variable to connect to the database.
 func Init() {
 	connStr := os.Getenv("DATABASE_URL")
 	var err error

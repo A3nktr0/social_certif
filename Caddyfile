@@ -8,10 +8,10 @@ localhost:8080 {
   redir @http https://{host}{uri}
 
   header {
-    X-Content-Type-Options "nosniff"
-    X-Frame-Options "DENY"
-    Referrer-Policy "no-referrer"
-    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    # X-Content-Type-Options "nosniff"
+    # X-Frame-Options "DENY"
+    # Referrer-Policy "no-referrer"
+    # Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
   }
 
     reverse_proxy /api/ws backend:8000

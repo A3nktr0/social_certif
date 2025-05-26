@@ -40,7 +40,6 @@ func (h *Hub) Run() {
 			var nickname string
 			_ = db.DB.QueryRow(`SELECT nickname FROM users WHERE id = $1`, client.UserID).Scan(&nickname)
 
-			// Step 1: Notify mutuals that *this* client is online
 			for _, allowedID := range allowedClients {
 				if targetClient, ok := h.clients[allowedID]; ok {
 					select {
@@ -60,7 +59,6 @@ func (h *Hub) Run() {
 				}
 			}
 
-			// Step 2: Send snapshot of who’s already online to the new client
 			h.sendPresenceSnapshot(client, allowedClients)
 
 		case client := <-h.unregister:

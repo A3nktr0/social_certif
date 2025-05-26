@@ -52,6 +52,7 @@ export default function ChatWindow({ type, targetId }: Props) {
     fetchInitialMessages();
   }, [type, targetId]);
 
+   // ...existing code...
   // WebSocket message handler
   useEffect(() => {
     const handle = (msg: WSMessage) => {
@@ -62,7 +63,7 @@ export default function ChatWindow({ type, targetId }: Props) {
       
       if (msg.event === "typing") {
         // Store typing info and set timeout to clear it
-        const isTyping = (chatData.content as string) === "typing";
+        const isTyping = (msg.content || chatData.content as string) === "typing";
         setIsTyping(isTyping);
         setTypingUser(((chatData.nickname as string) || (chatData.sender_id as string)) || "");
         if (isTyping) {
@@ -73,23 +74,23 @@ export default function ChatWindow({ type, targetId }: Props) {
         }  
         return;
       }
-
+  
       const senderId = (chatData.sender_id as string) || "";
       
-      // Construct a proper Message object
+      // Construct a proper Message object - use msg.content instead of chatData.content
       const normalized: Message = {
         id: (chatData.id as string) || "",
         sender_id: senderId,
         recipient_id: chatData.recipient_id as string | undefined,
         group_id: chatData.group_id as string | undefined,
-        content: (chatData.content as string) || "",
+        content: msg.content || (chatData.content as string) || "", // Use msg.content first
         is_emoji_only: (chatData.is_emoji_only as boolean) || false,
         created_at: chatData.created_at as string | undefined,
         channel: msg.channel,
         event: msg.event,
         data: chatData
       };
-
+  
       const isRelevant =
         (msg.event === "private_message" &&
           type === "private" &&
@@ -97,9 +98,9 @@ export default function ChatWindow({ type, targetId }: Props) {
         (msg.event === "group_message" &&
           type === "group" &&
           (chatData.group_id as string) === targetId);
-
+  
       if (!isRelevant) return;
-
+  
       setMessages((prev) => {
         const exists = prev.some(
           (m) =>
@@ -111,10 +112,11 @@ export default function ChatWindow({ type, targetId }: Props) {
       });
       scrollToBottom();
     };
-
+  
     onChannel("chat", handle);
     return () => offChannel("chat", handle);
   }, [type, targetId, user?.id]);
+  // ...existing code...
 
   return (
     <div className="bg-white w-80 h-[500px] rounded-2xl shadow-lg flex flex-col overflow-hidden border border-gray-200">

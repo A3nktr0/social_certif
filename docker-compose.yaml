@@ -49,6 +49,7 @@ services:
       context: ./backend
     volumes:
       # - ./backend:/backend
+      # - uploads:/backend/uploads
       - uploads:/app/uploads
     expose:
       - "8000"

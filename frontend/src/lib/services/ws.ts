@@ -1,9 +1,9 @@
-// lib/services/ws.ts
 
 interface WSMessage {
   channel: string;
   event: string;
   data: unknown;
+  content?: string;
 }
 
 type WSCallback = (payload: WSMessage) => void;

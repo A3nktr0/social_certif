@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/services/axios";
+import { initializeCSRF } from "@/lib/services/csrf";
 
 type User = {
   id: string;
@@ -38,7 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const initialize = async () => {
+      // Initialize CSRF protection
+      await initializeCSRF();
+      
       try {
         const res = await api.get("/me");
         setUser(res.data);
@@ -49,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    fetchUser();
+    initialize();
   }, []);
 
   const logout = async () => {

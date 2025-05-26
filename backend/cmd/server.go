@@ -21,101 +21,108 @@ func main() {
 
 	r.Use(middleware.CORSMiddleware)            // CORS
 	r.Use(middleware.SecurityHeadersMiddleware) // Sécurité
+	r.Use(middleware.SetCSRFToken)              // CSRF token
 
 	// Public
 	r.Get("/api/health", handlers.Health)
+	r.Get("/api/csrf", middleware.GetCSRFToken)
 	r.Post("/api/register", middleware.RateLimit(handlers.Register))
 	r.Post("/api/login", middleware.RateLimit(handlers.Login))
 
-	// Authenticated
-	r.With(middleware.RequireAuth).Post("/api/logout", handlers.Logout)
-	r.With(middleware.RequireAuth).Get("/api/me", handlers.Me)
-	r.With(middleware.RequireAuth).Delete("/api/me", handlers.DeleteMyProfile)
-	r.With(middleware.RequireAuth).Get("/api/me/data", handlers.GetMyPersonalData)
-	r.With(middleware.RequireAuth).Get("/api/hello", HelloUser)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth)    // Authenticated routes
+		r.Use(middleware.CSRFMiddleware) // CSRF token for authenticated routes
+		// Authenticated
+		r.Post("/api/logout", handlers.Logout)
+		r.Get("/api/me", handlers.Me)
+		r.Delete("/api/me", handlers.DeleteMyProfile)
+		r.Get("/api/me/data", handlers.GetMyPersonalData)
+		r.Get("/api/hello", HelloUser)
 
-	// Profile access
-	r.With(middleware.RequireAuth).Get("/api/profile/{id}", handlers.GetUserProfile)
-	r.With(middleware.RequireAuth).Post("/api/profile/edit", handlers.UpdateUserProfile)
-	r.With(middleware.RequireAuth).Post("/api/upload/avatar", handlers.UploadAvatar)
+		// Profile access
+		r.Get("/api/profile/{id}", handlers.GetUserProfile)
+		r.Post("/api/profile/edit", handlers.UpdateUserProfile)
+		r.Post("/api/upload/avatar", handlers.UploadAvatar)
 
-	// Follow
-	r.With(middleware.RequireAuth).Post("/api/follow/{id}", handlers.FollowUser)
-	r.With(middleware.RequireAuth).Get("/api/follow/status/{id}", handlers.FollowStatus)
-	r.With(middleware.RequireAuth).Post("/api/follow/unfollow/{id}", handlers.UnfollowUser)
-	r.With(middleware.RequireAuth).Post("/api/follow/accept/{id}", handlers.AcceptFollowRequest)
-	r.With(middleware.RequireAuth).Post("/api/follow/reject/{id}", handlers.RejectFollowRequest)
-	r.With(middleware.RequireAuth).Get("/api/follow/followers", handlers.ListFollowers)
-	r.With(middleware.RequireAuth).Get("/api/follow/following", handlers.ListFollowingUsers)
-	r.With(middleware.RequireAuth).Get("/api/follow/stats", handlers.FollowStats)
+		// Follow
+		r.Post("/api/follow/{id}", handlers.FollowUser)
+		r.Get("/api/follow/status/{id}", handlers.FollowStatus)
+		r.Post("/api/follow/unfollow/{id}", handlers.UnfollowUser)
+		r.Post("/api/follow/accept/{id}", handlers.AcceptFollowRequest)
+		r.Post("/api/follow/reject/{id}", handlers.RejectFollowRequest)
+		r.Get("/api/follow/followers", handlers.ListFollowers)
+		r.Get("/api/follow/following", handlers.ListFollowingUsers)
+		r.Get("/api/follow/stats", handlers.FollowStats)
 
-	// Posts
-	r.With(middleware.RequireAuth).Post("/api/posts", handlers.CreatePost)
-	r.With(middleware.RequireAuth).Get("/api/posts/feed", handlers.GetFeed)
-	r.With(middleware.RequireAuth).Get("/api/posts/{id}", handlers.GetPostByID)
-	r.With(middleware.RequireAuth).Get("/api/posts/by-user/{id}", handlers.GetPostsByUser)
-	r.With(middleware.RequireAuth).Put("/api/posts/{id}", handlers.EditPost)
-	r.With(middleware.RequireAuth).Delete("/api/posts/{id}", handlers.DeletePost)
+		// Posts
+		r.Post("/api/posts", handlers.CreatePost)
+		r.Get("/api/posts/feed", handlers.GetFeed)
+		r.Get("/api/posts/{id}", handlers.GetPostByID)
+		r.Get("/api/posts/by-user/{id}", handlers.GetPostsByUser)
+		r.Put("/api/posts/{id}", handlers.EditPost)
+		r.Delete("/api/posts/{id}", handlers.DeletePost)
 
-	// Likes
-	r.With(middleware.RequireAuth).Post("/api/posts/{id}/like", handlers.LikePost)
-	r.With(middleware.RequireAuth).Post("/api/posts/{id}/unlike", handlers.UnlikePost)
-	r.With(middleware.RequireAuth).Get("/api/posts/{id}/likes", handlers.GetLikes)
-	r.With(middleware.RequireAuth).Get("/api/posts/{id}/liked", handlers.HasLiked)
+		// Likes
+		r.Post("/api/posts/{id}/like", handlers.LikePost)
+		r.Post("/api/posts/{id}/unlike", handlers.UnlikePost)
+		r.Get("/api/posts/{id}/likes", handlers.GetLikes)
+		r.Get("/api/posts/{id}/liked", handlers.HasLiked)
 
-	// Comments
-	r.With(middleware.RequireAuth).Post("/api/posts/{id}/comments", handlers.CreateComment)
-	r.With(middleware.RequireAuth).Get("/api/posts/{id}/comments", handlers.GetComments)
-	r.With(middleware.RequireAuth).Put("/api/comments/{id}", handlers.EditComment)
-	r.With(middleware.RequireAuth).Delete("/api/comments/{id}", handlers.DeleteComment)
+		// Comments
+		r.Post("/api/posts/{id}/comments", handlers.CreateComment)
+		r.Get("/api/posts/{id}/comments", handlers.GetComments)
+		r.Put("/api/comments/{id}", handlers.EditComment)
+		r.Delete("/api/comments/{id}", handlers.DeleteComment)
 
-	// Explore
-	r.With(middleware.RequireAuth).Get("/api/explore", handlers.ExploreUsers)
+		// Explore
+		r.Get("/api/explore", handlers.ExploreUsers)
 
-	// Groups
-	r.With(middleware.RequireAuth).Post("/api/groups", handlers.CreateGroup)
-	r.With(middleware.RequireAuth).Get("/api/groups", handlers.ListUserGroups)
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}", handlers.GetGroupByID)
-	r.With(middleware.RequireAuth).Get("/api/groups/discover", handlers.DiscoverGroups)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/join", handlers.RequestToJoinGroup)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/invite/{userId}", handlers.InviteUserToGroup)
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}/invite-options", handlers.GetInvitableUsers)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/accept-request/{userId}", handlers.AcceptJoinRequest)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/reject-request/{userId}", handlers.RejectJoinRequest)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/accept-invite", handlers.AcceptInvite)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/reject-invite", handlers.RejectInvite)
-	r.With(middleware.RequireAuth).Put("/api/groups/{id}", handlers.UpdateGroup)
-	r.With(middleware.RequireAuth).Delete("/api/groups/{id}", handlers.DeleteGroup)
+		// Groups
+		r.Post("/api/groups", handlers.CreateGroup)
+		r.Get("/api/groups", handlers.ListUserGroups)
+		r.Get("/api/groups/{id}", handlers.GetGroupByID)
+		r.Get("/api/groups/discover", handlers.DiscoverGroups)
+		r.Post("/api/groups/{id}/join", handlers.RequestToJoinGroup)
+		r.Post("/api/groups/{id}/invite/{userId}", handlers.InviteUserToGroup)
+		r.Get("/api/groups/{id}/invite-options", handlers.GetInvitableUsers)
+		r.Post("/api/groups/{id}/accept-request/{userId}", handlers.AcceptJoinRequest)
+		r.Post("/api/groups/{id}/reject-request/{userId}", handlers.RejectJoinRequest)
+		r.Post("/api/groups/{id}/accept-invite", handlers.AcceptInvite)
+		r.Post("/api/groups/{id}/reject-invite", handlers.RejectInvite)
+		r.Put("/api/groups/{id}", handlers.UpdateGroup)
+		r.Delete("/api/groups/{id}", handlers.DeleteGroup)
 
-	// Group members
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}/members", handlers.GetGroupMembers)
-	r.With(middleware.RequireAuth).Delete("/api/groups/{id}/members/{userId}", handlers.RemoveGroupMember)
+		// Group members
+		r.Get("/api/groups/{id}/members", handlers.GetGroupMembers)
+		r.Delete("/api/groups/{id}/members/{userId}", handlers.RemoveGroupMember)
 
-	// Group posts
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/posts", handlers.CreateGroupPost)
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}/posts", handlers.GetGroupPosts)
+		// Group posts
+		r.Post("/api/groups/{id}/posts", handlers.CreateGroupPost)
+		r.Get("/api/groups/{id}/posts", handlers.GetGroupPosts)
 
-	// Group Events
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/events", handlers.CreateGroupEvent)
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}/events", handlers.GetGroupEvents)
-	r.With(middleware.RequireAuth).Delete("/api/groups/{id}/events/{eventId}", handlers.DeleteGroupEvent)
-	r.With(middleware.RequireAuth).Post("/api/groups/{id}/events/{eventId}/rsvp", handlers.RSVPEvent)
-	r.With(middleware.RequireAuth).Get("/api/groups/{id}/events/{eventId}", handlers.GetGroupEventDetail)
-	r.With(middleware.RequireAuth).Patch("/api/groups/{id}/events/{eventId}", handlers.UpdateGroupEvent)
+		// Group Events
+		r.Post("/api/groups/{id}/events", handlers.CreateGroupEvent)
+		r.Get("/api/groups/{id}/events", handlers.GetGroupEvents)
+		r.Delete("/api/groups/{id}/events/{eventId}", handlers.DeleteGroupEvent)
+		r.Post("/api/groups/{id}/events/{eventId}/rsvp", handlers.RSVPEvent)
+		r.Get("/api/groups/{id}/events/{eventId}", handlers.GetGroupEventDetail)
+		r.Patch("/api/groups/{id}/events/{eventId}", handlers.UpdateGroupEvent)
 
-	// notifications
-	r.With(middleware.RequireAuth).Get("/api/notifications", handlers.GetNotifications)
-	r.With(middleware.RequireAuth).Delete("/api/notifications/{id}", handlers.DeleteNotification)
-	r.With(middleware.RequireAuth).Patch("/api/notifications/{id}/read", handlers.MarkNotificationAsRead)
-	r.With(middleware.RequireAuth).Get("/api/notifications/unread/count", handlers.CountUnreadNotifications)
+		// notifications
+		r.Get("/api/notifications", handlers.GetNotifications)
+		r.Delete("/api/notifications/{id}", handlers.DeleteNotification)
+		r.Patch("/api/notifications/{id}/read", handlers.MarkNotificationAsRead)
+		r.Get("/api/notifications/unread/count", handlers.CountUnreadNotifications)
 
-	// chat
-	r.With(middleware.RequireAuth).Get("/api/chat/mutuals", handlers.GetMutualChatUsers)
-	r.With(middleware.RequireAuth).Get("/api/chat/private/{id}", handlers.GetPrivateMessages)
-	r.With(middleware.RequireAuth).Get("/api/chat/group/{id}", handlers.GetGroupMessages)
+		// chat
+		r.Get("/api/chat/mutuals", handlers.GetMutualChatUsers)
+		r.Get("/api/chat/private/{id}", handlers.GetPrivateMessages)
+		r.Get("/api/chat/group/{id}", handlers.GetGroupMessages)
 
-	// websocket
-	r.With(middleware.RequireAuth).Get("/api/ws", websocket.ServeWS)
+		// websocket
+		r.Get("/api/ws", websocket.ServeWS)
+
+	})
 
 	// Start server
 	port := os.Getenv("BACKEND_PORT")

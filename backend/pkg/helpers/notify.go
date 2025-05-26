@@ -3,7 +3,6 @@ package helpers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"socialbackend/pkg/constants"
 	"socialbackend/pkg/db"
@@ -60,16 +59,6 @@ func Create(userID, fromUserID, notifType, content string, data map[string]inter
 		log.Printf("DB insert failed: %v", err)
 		return
 	}
-
-	fmt.Println("Notification created:", websocket.Message{
-		Channel:  constants.ChannelNotifications,
-		Event:    notifType,
-		From:     fromPtr,
-		To:       userID,
-		Content:  content,
-		Data:     data,
-		IsSystem: isSystem,
-	})
 
 	// Send WebSocket
 	websocket.Send(websocket.Message{

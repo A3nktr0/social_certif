@@ -33,3 +33,8 @@ func GetUserID(r *http.Request) string {
 	id, _ := r.Context().Value(UserIDKey).(string)
 	return id
 }
+
+// WithUserID adds a user ID to the request context
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, UserIDKey, userID)
+}

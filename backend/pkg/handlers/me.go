@@ -120,34 +120,40 @@ func DeleteMyProfile(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func GetMyPersonalData(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	userDataQuery := `
-		SELECT string_agg(DISTINCT name, '<group_delimiter>') AS GROUP_LIST, 
-			u.email, u.first_name, u.last_name, u.dob AS DATE_OF_BIRTH, u.nickname, u.about, u.is_private, u.created_at AS USER_CREATION_DATE,
-			COUNT(DISTINCT p.id) AS NB_POSTS, string_agg(DISTINCT p."content", '<post_delimiter>') AS POSTS_LIST,
-			COUNT(DISTINCT c.id) AS NB_COMMENTS, string_agg(DISTINCT c."content", '<comment_delimiter>') AS COMMENTS_LIST,
-			COUNT(DISTINCT m.id) AS NB_MESSAGES_SENT, string_agg(DISTINCT m."content", '<message_sent_delimiter>') AS MESSAGES_SENT,
-			COUNT(DISTINCT m2.id) AS NB_MESSAGES_RECEIVED, string_agg(DISTINCT m2."content", '<message_received_delimiter>') AS MESSAGES_RECEIVED,
-			COUNT(DISTINCT pl.id) AS NB_POSTS_LIKED, 
-			COUNT(DISTINCT e.id) AS NB_EVENTS_CREATED, string_agg(DISTINCT CONCAT(e.title , '|',  e.description), '<event_delimiter>') AS EVENT_DESCRIPTION_LIST,
-			COUNT(DISTINCT er.event_id) AS NB_EVENTS_ACCEPTED,
-			COUNT(DISTINCT er2.event_id) AS NB_EVENTS_REFUSED
-				FROM users u 
-					JOIN group_members gm ON gm.user_id = u.id
-					JOIN groups gs ON gm.group_id = gs.id
-					JOIN posts p ON p.user_id = u.id
-					JOIN "comments" c ON c.user_id = u.id
-					JOIN messages m ON m.sender_id = u.id
-					JOIN messages m2 ON m2.recipient_id = u.id
-					JOIN post_likes pl ON pl.user_id = u.id
-					JOIN events e ON e.creator_id = u.id
-					JOIN event_rsvps er ON er.user_id = u.id AND er.response = 'going'
-					JOIN event_rsvps er2 ON er2.user_id = u.id AND er2.response = 'not_going'
-					WHERE u.id = $1
-			GROUP BY u.id, u.email, u.first_name, u.last_name, u.dob, u.nickname, u.about, u.is_private, u.created_at, p.user_id;
-	`
+        SELECT 
+            COALESCE(string_agg(DISTINCT gs.name, '<group_delimiter>'), '') AS GROUP_LIST,
+            u.email, u.first_name, u.last_name, u.dob AS DATE_OF_BIRTH, 
+            u.nickname, u.about, u.is_private, u.created_at AS USER_CREATION_DATE,
+            COUNT(DISTINCT p.id) AS NB_POSTS, 
+            COALESCE(string_agg(DISTINCT p."content", '<post_delimiter>'), '') AS POSTS_LIST,
+            COUNT(DISTINCT c.id) AS NB_COMMENTS, 
+            COALESCE(string_agg(DISTINCT c."content", '<comment_delimiter>'), '') AS COMMENTS_LIST,
+            COUNT(DISTINCT m.id) AS NB_MESSAGES_SENT, 
+            COALESCE(string_agg(DISTINCT m."content", '<message_sent_delimiter>'), '') AS MESSAGES_SENT,
+            COUNT(DISTINCT m2.id) AS NB_MESSAGES_RECEIVED, 
+            COALESCE(string_agg(DISTINCT m2."content", '<message_received_delimiter>'), '') AS MESSAGES_RECEIVED,
+            COUNT(DISTINCT pl.id) AS NB_POSTS_LIKED,
+            COUNT(DISTINCT e.id) AS NB_EVENTS_CREATED, 
+            COALESCE(string_agg(DISTINCT CONCAT(e.title, '|', e.description), '<event_delimiter>'), '') AS EVENT_DESCRIPTION_LIST,
+            COUNT(DISTINCT er.event_id) AS NB_EVENTS_ACCEPTED,
+            COUNT(DISTINCT er2.event_id) AS NB_EVENTS_REFUSED
+        FROM users u 
+        LEFT JOIN group_members gm ON gm.user_id = u.id
+        LEFT JOIN groups gs ON gm.group_id = gs.id
+        LEFT JOIN posts p ON p.user_id = u.id
+        LEFT JOIN "comments" c ON c.user_id = u.id
+        LEFT JOIN messages m ON m.sender_id = u.id
+        LEFT JOIN messages m2 ON m2.recipient_id = u.id
+        LEFT JOIN post_likes pl ON pl.user_id = u.id
+        LEFT JOIN events e ON e.creator_id = u.id
+        LEFT JOIN event_rsvps er ON er.user_id = u.id AND er.response = 'going'
+        LEFT JOIN event_rsvps er2 ON er2.user_id = u.id AND er.response = 'not_going'
+        WHERE u.id = $1
+        GROUP BY u.id, u.email, u.first_name, u.last_name, u.dob, u.nickname, u.about, u.is_private, u.created_at;
+    `
 	result := db.DB.QueryRow(userDataQuery, userID)
 
 	var userData models.UserPersonalData
@@ -162,31 +168,63 @@ func GetMyPersonalData(w http.ResponseWriter, r *http.Request) {
 		&userData.NumberOfPostsLiked, &userData.NumberOfEventsCreated, &eventList,
 		&userData.NumberOfEventsAccepted, &userData.NumberOfEventsRefused,
 	); err != nil {
-		fmt.Println(err)
+		fmt.Println("Error fetching user data:", err)
 		http.Error(w, "Failed to gather user's personal data", http.StatusInternalServerError)
 		return
 	}
-	userData.CommentsList = strings.Split(commentsList, "<comment_delimiter>")
-	userData.GroupList = strings.Split(groupList, "<group_delimiter>")
-	userData.PostsList = strings.Split(postsList, "<post_delimiter>")
-	userData.MessagesSent = strings.Split(messagesSent, "<message_sent_delimiter>")
-	userData.MessagesReceived = strings.Split(messagesReceived, "<message_received_delimiter>")
-	eventArray := strings.Split(eventList, "<event_delimiter>")
-	var events []*models.Event
-	for _, event := range eventArray {
-		var eventStruct models.Event
-		eventSplitted := strings.Split(event, "|")
-		eventStruct.Title = eventSplitted[0]
-		eventStruct.Content = eventSplitted[1]
-		events = append(events, &eventStruct)
+
+	// Handle empty string cases
+	if groupList != "" {
+		userData.GroupList = strings.Split(groupList, "<group_delimiter>")
+	} else {
+		userData.GroupList = []string{}
 	}
-	userData.EventList = events
+
+	if postsList != "" {
+		userData.PostsList = strings.Split(postsList, "<post_delimiter>")
+	} else {
+		userData.PostsList = []string{}
+	}
+
+	if commentsList != "" {
+		userData.CommentsList = strings.Split(commentsList, "<comment_delimiter>")
+	} else {
+		userData.CommentsList = []string{}
+	}
+
+	if messagesSent != "" {
+		userData.MessagesSent = strings.Split(messagesSent, "<message_sent_delimiter>")
+	} else {
+		userData.MessagesSent = []string{}
+	}
+
+	if messagesReceived != "" {
+		userData.MessagesReceived = strings.Split(messagesReceived, "<message_received_delimiter>")
+	} else {
+		userData.MessagesReceived = []string{}
+	}
+
+	// Handle event list
+	userData.EventList = []*models.Event{}
+	if eventList != "" {
+		eventArray := strings.Split(eventList, "<event_delimiter>")
+		for _, event := range eventArray {
+			eventSplitted := strings.Split(event, "|")
+			if len(eventSplitted) >= 2 {
+				var eventStruct models.Event
+				eventStruct.Title = eventSplitted[0]
+				eventStruct.Content = eventSplitted[1]
+				userData.EventList = append(userData.EventList, &eventStruct)
+			}
+		}
+	}
 
 	respJson, err := json.Marshal(&userData)
 	if err != nil {
-		http.Error(w, "Failed to gather user's personal data", http.StatusInternalServerError)
+		http.Error(w, "Failed to marshal user's personal data", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(respJson)
 }

@@ -1,69 +1,44 @@
-// lib/api/notifications.ts
+import api from "@/lib/services/axios";
 
 export const fetchNotifications = async () => {
-  const res = await fetch("/api/notifications", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch notifications");
-  return await res.json();
+  const res = await api.get("/notifications");
+  return res.data;
 };
 
 export const deleteNotification = async (id: string) => {
-  await fetch(`/api/notifications/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
+  await api.delete(`/notifications/${id}`);
 };
 
 export const markAsRead = async (id: string) => {
-  await fetch(`/api/notifications/${id}/read`, {
-    method: "PATCH",
-    credentials: "include",
-  });
+  await api.patch(`/notifications/${id}/read`);
 };
 
 export const acceptFollow = async (userId: string) => {
-  await fetch(`/api/follow/accept/${userId}`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/follow/accept/${userId}`);
 };
 
 export const rejectFollow = async (userId: string) => {
-  await fetch(`/api/follow/reject/${userId}`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/follow/reject/${userId}`);
 };
 
 export const acceptGroupInvite = async (groupId: string) => {
-  await fetch(`/api/groups/${groupId}/accept-invite`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/groups/${groupId}/accept-invite` );
 };
 
 export const rejectGroupInvite = async (groupId: string) => {
-  await fetch(`/api/groups/${groupId}/reject-invite`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/groups/${groupId}/reject-invite`);
 };
 
 export const acceptGroupJoinRequest = async (
   groupId: string,
   userId: string,
 ) => {
-  await fetch(`/api/groups/${groupId}/accept-request/${userId}`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/groups/${groupId}/accept-request/${userId}`);
 };
 
 export const rejectGroupJoinRequest = async (
   groupId: string,
   userId: string,
 ) => {
-  await fetch(`/api/groups/${groupId}/reject-request/${userId}`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await api.post(`/groups/${groupId}/reject-request/${userId}`);
 };
