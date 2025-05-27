@@ -80,8 +80,18 @@ export default function MessageComposer({ type, targetId }: Props) {
       </button>
 
       {showEmojiPicker && (
-        <div className="absolute bottom-12 left-0 z-10">
-          <EmojiPicker onEmojiClick={handleEmojiClick} />
+        <div className="absolute bottom-12 left-0 z-10 max-w-sm">
+          <EmojiPicker 
+            onEmojiClick={handleEmojiClick}
+            width={280}
+            height={350}
+            searchDisabled={false}
+            skinTonesDisabled={true}
+            previewConfig={{
+              showPreview: false
+            }}
+            lazyLoadEmojis={true}
+          />
         </div>
       )}
 
